@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MemberRole {
+  LEADER
+  MEMBER
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  TENTATIVE
+}
+
+enum SlotRole {
+  DPS
+  SUPPORT
+  FLEX
+  OTHER
+}
+
+enum ScheduleStatus {
+  DRAFT
+  OPEN
+  CONFIRMED
+  COMPLETED
+  CANCELED
+}
+
+enum ConfirmationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELED
+}
+
+model Group {
+  id            String            @id @default(cuid())
+  name          String
+  inviteCode    String            @unique
+  inviteEnabled Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  members       Member[]
+  templates     RaidTemplate[]
+  schedules     Schedule[]
+  notifications NotificationJob[]
+}
+
+model Member {
+  id                 String              @id @default(cuid())
+  groupId            String
+  group              Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  nickname           String
+  role               MemberRole          @default(MEMBER)
+  discordUserId      String?
+  discordConnectedAt DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  characters         Character[]
+  availabilityBlocks AvailabilityBlock[]
+  createdSchedules   Schedule[]          @relation("ScheduleCreator")
+  assignedSlots      ScheduleSlot[]
+  notifications      NotificationJob[]
+
+  @@unique([groupId, nickname])
+}
+
+model Character {
+  id            String         @id @default(cuid())
+  memberId      String
+  member        Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  name          String
+  className     String
+  itemLevel     Int
+  preferredRole SlotRole
+  notes         String         @default("")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  scheduleSlots ScheduleSlot[]
+}
+
+model AvailabilityBlock {
+  id        String             @id @default(cuid())
+  memberId  String
+  member    Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date      DateTime
+  startsAt  DateTime
+  endsAt    DateTime
+  status    AvailabilityStatus
+  memo      String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([memberId, date])
+}
+
+model RaidTemplate {
+  id             String             @id @default(cuid())
+  groupId        String
+  group          Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name           String
+  difficulty     String
+  gates          String
+  requiredPlayers Int
+  requirements   String             @default("")
+  notes          String             @default("")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  slots          RaidTemplateSlot[]
+  schedules      Schedule[]
+}
+
+model RaidTemplateSlot {
+  id              String         @id @default(cuid())
+  templateId      String
+  template        RaidTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label           String
+  role            SlotRole
+  required        Boolean        @default(true)
+  classPreference String?
+  notes           String         @default("")
+  scheduleSlots   ScheduleSlot[]
+}
+
+model Schedule {
+  id                String            @id @default(cuid())
+  groupId           String
+  group             Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  templateId         String
+  template           RaidTemplate      @relation(fields: [templateId], references: [id])
+  title             String
+  startsAt          DateTime
+  endsAt            DateTime?
+  status            ScheduleStatus    @default(OPEN)
+  notes             String            @default("")
+  createdByMemberId String
+  createdBy          Member            @relation("ScheduleCreator", fields: [createdByMemberId], references: [id])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  slots              ScheduleSlot[]
+  notifications      NotificationJob[]
+}
+
+model ScheduleSlot {
+  id                 String             @id @default(cuid())
+  scheduleId          String
+  schedule            Schedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  templateSlotId      String?
+  templateSlot        RaidTemplateSlot?  @relation(fields: [templateSlotId], references: [id])
+  label               String
+  role                SlotRole
+  assignedMemberId    String?
+  assignedMember      Member?            @relation(fields: [assignedMemberId], references: [id])
+  assignedCharacterId String?
+  assignedCharacter   Character?         @relation(fields: [assignedCharacterId], references: [id])
+  confirmationStatus  ConfirmationStatus @default(PENDING)
+  notes               String             @default("")
+}
+
+model NotificationJob {
+  id            String             @id @default(cuid())
+  groupId       String
+  group         Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  scheduleId    String?
+  schedule      Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  type          String
+  message       String
+  sendAfter     DateTime
+  status        NotificationStatus @default(PENDING)
+  failureReason String?
+  attempts      Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
