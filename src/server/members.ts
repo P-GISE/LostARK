@@ -41,3 +41,20 @@ export async function listMembers(groupId: string) {
     include: { characters: true },
   });
 }
+
+export async function connectDiscordMember(input: {
+  memberId: string;
+  discordUserId: string;
+}) {
+  if (!input.discordUserId.trim()) {
+    throw new Error("Discord user id is required");
+  }
+
+  return db.member.update({
+    where: { id: input.memberId },
+    data: {
+      discordUserId: input.discordUserId.trim(),
+      discordConnectedAt: new Date(),
+    },
+  });
+}

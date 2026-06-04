@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createGroup } from "@/server/groups";
-import { joinGroupByInvite, listMembers } from "@/server/members";
+import {
+  connectDiscordMember,
+  joinGroupByInvite,
+  listMembers,
+} from "@/server/members";
 
 describe("members", () => {
   it("joins a group through an enabled invite code", async () => {
@@ -35,5 +39,21 @@ describe("members", () => {
 
     const members = await listMembers(group.id);
     expect(members.map((member) => member.nickname)).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("connects a Discord user id to a member", async () => {
+    const group = await createGroup({ name: "Static" });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "DiscordUser",
+    });
+
+    const connected = await connectDiscordMember({
+      memberId: member.id,
+      discordUserId: "1234567890",
+    });
+
+    expect(connected.discordUserId).toBe("1234567890");
+    expect(connected.discordConnectedAt).toBeInstanceOf(Date);
   });
 });
