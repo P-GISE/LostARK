@@ -42,12 +42,13 @@ Sources:
 
 Extend `Character` with:
 
+- `itemLevel Float`
 - `serverName String @default("")`
 - `combatPower Int?`
 - `isMain Boolean @default(false)`
 - `lastSyncedAt DateTime?`
 
-Existing manually-created characters remain valid. `serverName` defaults to empty and `combatPower` can be null for characters not imported through the API.
+Existing manually-created characters remain valid. `itemLevel` changes from integer to float so imported values like `1773.33` are preserved. `serverName` defaults to empty and `combatPower` can be null for characters not imported through the API.
 
 Character ownership stays unchanged: a character belongs to one `Member`.
 
