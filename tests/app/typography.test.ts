@@ -41,7 +41,7 @@ describe("typography", () => {
       }))
       .filter(({ content }) => /tracking-|uppercase/.test(content));
 
-    expect(css).toMatch(/\*\s*\{[^}]*letter-spacing:\s*0;/s);
+    expect(css).toMatch(/\*\s*\{[\s\S]*?letter-spacing:\s*0;/);
     expect(sourceWithTracking).toEqual([]);
   });
 });
