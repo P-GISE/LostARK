@@ -142,6 +142,35 @@ describe("character sync", () => {
     });
   });
 
+  it("imports same-server siblings when an optional profile response is missing", async () => {
+    mockLostArkFetch({
+      "/armories/characters/%EB%B6%80%EC%BA%90/profiles": null,
+    });
+    const group = await createGroup({ name: "Sync Missing Profile" });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "MissingProfile",
+    });
+
+    const result = await syncLostArkCharactersForMember({
+      memberId: member.id,
+      mainCharacterName: "\uBCF8\uCE90",
+      now: new Date("2026-06-05T12:00:00+09:00"),
+    });
+    const characters = await listCharactersForMember(member.id);
+
+    expect(result).toMatchObject({
+      importedCount: 2,
+      updatedCount: 0,
+      skippedOtherServerCount: 1,
+    });
+    expect(characters.find((character) => character.itemLevel === 1720)).toMatchObject({
+      itemLevel: 1720,
+      combatPower: null,
+      isMain: false,
+    });
+  });
+
   it("updates a blank-server manual character instead of duplicating it", async () => {
     const group = await createGroup({ name: "Sync Blank Server" });
     const member = await joinGroupByInvite({

@@ -64,6 +64,13 @@ export function parseLostArkNumber(value: string | number | null | undefined) {
   return parsed;
 }
 
+export function isLostArkCharacterInfoError(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message === LOSTARK_CHARACTER_INFO_ERROR
+  );
+}
+
 function getApiToken() {
   const token = process.env.LOSTARK_OPEN_API_JWT?.trim();
   if (!token) {

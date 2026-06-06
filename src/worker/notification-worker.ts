@@ -19,7 +19,14 @@ export async function processNotificationJobsOnce() {
     } catch (error) {
       const reason =
         error instanceof Error ? error.message : "알 수 없는 디스코드 오류";
-      await markNotificationFailed(job.id, reason);
+      try {
+        await markNotificationFailed(job.id, reason);
+      } catch (markError) {
+        console.error("Failed to mark notification job as failed", {
+          error: markError,
+          jobId: job.id,
+        });
+      }
     }
   }
 }

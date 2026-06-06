@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lost Ark party planner PC-primary and EC2-backup failover controller.
+
+Parameters:
+  CloudflareApiToken:
+    Type: String
+    NoEcho: true
+  CloudflareZoneId:
+    Type: String
+  CloudflareAccountId:
+    Type: String
+  Ec2InstanceId:
+    Type: String
+  PcTunnelId:
+    Type: String
+  PcTunnelTarget:
+    Type: String
+  AwsTunnelTarget:
+    Type: String
+  PrimaryUrl:
+    Type: String
+    Default: https://pc.pigs0516.com/
+  BackupUrl:
+    Type: String
+    Default: https://aws.pigs0516.com/
+  PublicHost:
+    Type: String
+    Default: lostark-party.pigs0516.com
+  PublicWwwHost:
+    Type: String
+    Default: pigs0516.com
+  ScheduleExpression:
+    Type: String
+    Default: rate(5 minutes)
+
+Resources:
+  FailoverRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: lostark-party-failover
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${Ec2InstanceId}
+
+  FailoverFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: lostark-party-failover
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt FailoverRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          PRIMARY_URL: !Ref PrimaryUrl
+          BACKUP_URL: !Ref BackupUrl
+          PUBLIC_HOST: !Ref PublicHost
+          PUBLIC_WWW_HOST: !Ref PublicWwwHost
+          EC2_INSTANCE_ID: !Ref Ec2InstanceId
+          CLOUDFLARE_ZONE_ID: !Ref CloudflareZoneId
+          CLOUDFLARE_ACCOUNT_ID: !Ref CloudflareAccountId
+          PC_TUNNEL_ID: !Ref PcTunnelId
+          PC_TUNNEL_TARGET: !Ref PcTunnelTarget
+          AWS_TUNNEL_TARGET: !Ref AwsTunnelTarget
+          CLOUDFLARE_API_TOKEN: !Ref CloudflareApiToken
+      Code:
+        ZipFile: |
+          import json, os, urllib.error, urllib.request, boto3
+          ec2 = boto3.client("ec2")
+          def env(n):
+              v = os.environ.get(n)
+              if not v: raise RuntimeError("Missing environment variable: " + n)
+              return v
+          def healthy(url):
+              try:
+                  req = urllib.request.Request(url, method="HEAD")
+                  with urllib.request.urlopen(req, timeout=int(os.environ.get("HEALTH_TIMEOUT_SECONDS", "5"))) as r:
+                      return 200 <= r.status < 400
+              except urllib.error.HTTPError:
+                  return False
+              except Exception:
+                  return False
+          def cf(method, path, payload=None):
+              data = None if payload is None else json.dumps(payload).encode("utf-8")
+              req = urllib.request.Request("https://api.cloudflare.com/client/v4" + path, data=data, method=method, headers={"Authorization": "Bearer " + env("CLOUDFLARE_API_TOKEN"), "Content-Type": "application/json"})
+              with urllib.request.urlopen(req, timeout=10) as r:
+                  body = json.loads(r.read().decode("utf-8"))
+              if not body.get("success"): raise RuntimeError(json.dumps(body.get("errors", body)))
+              return body["result"]
+          def cname(host, target):
+              zid = env("CLOUDFLARE_ZONE_ID")
+              records = cf("GET", f"/zones/{zid}/dns_records?type=CNAME&name={host}")
+              payload = {"type": "CNAME", "name": host, "content": target, "proxied": True, "ttl": 1}
+              if records: cf("PUT", f"/zones/{zid}/dns_records/{records[0]['id']}", payload)
+              else: cf("POST", f"/zones/{zid}/dns_records", payload)
+          def pc_tunnel_healthy():
+              try:
+                  tunnel = cf("GET", f"/accounts/{env('CLOUDFLARE_ACCOUNT_ID')}/cfd_tunnel/{env('PC_TUNNEL_ID')}")
+                  return tunnel.get("status") == "healthy" and len(tunnel.get("connections", [])) > 0
+              except Exception:
+                  return healthy(env("PRIMARY_URL"))
+          def handler(event, context):
+              instance_id = env("EC2_INSTANCE_ID")
+              state = ec2.describe_instances(InstanceIds=[instance_id])["Reservations"][0]["Instances"][0]["State"]["Name"]
+              if pc_tunnel_healthy():
+                  target, action = env("PC_TUNNEL_TARGET"), "primary"
+                  if state in {"pending", "running"}:
+                      ec2.stop_instances(InstanceIds=[instance_id]); action = "primary-stop-backup"
+              else:
+                  target, action = env("AWS_TUNNEL_TARGET"), "backup"
+                  if state in {"stopped", "stopping"}:
+                      ec2.start_instances(InstanceIds=[instance_id]); action = "backup-start"
+              cname(env("PUBLIC_HOST"), target)
+              if os.environ.get("PUBLIC_WWW_HOST"): cname(os.environ["PUBLIC_WWW_HOST"], target)
+              return {"statusCode": 200, "body": json.dumps({"action": action, "target": target, "instanceStateBeforeAction": state})}
+
+  FailoverSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Check PC tunnel health and switch DNS/start EC2 backup when needed.
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt FailoverFunction.Arn
+          Id: lostark-party-failover
+
+  FailoverSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FailoverFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt FailoverSchedule.Arn
+
+Outputs:
+  FailoverFunctionName:
+    Value: !Ref FailoverFunction

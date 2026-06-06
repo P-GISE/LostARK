@@ -2,7 +2,9 @@ import { db } from "@/server/db";
 import {
   fetchLostArkCharacterProfile,
   fetchLostArkSiblingCharacters,
+  isLostArkCharacterInfoError,
   type LostArkCharacterProfile,
+  type LostArkSiblingCharacter,
 } from "@/server/lostark-api";
 
 const AUTO_SYNC_STALE_MS = 5 * 60 * 1000;
@@ -16,6 +18,23 @@ function inferPreferredRole(className: string) {
   return ["바드", "홀리나이트", "도화가", "발키리"].includes(className)
     ? "SUPPORT"
     : "DPS";
+}
+
+async function fetchLostArkCharacterProfileOrFallback(
+  sibling: LostArkSiblingCharacter,
+): Promise<LostArkCharacterProfile> {
+  try {
+    return await fetchLostArkCharacterProfile(sibling.characterName);
+  } catch (error) {
+    if (!isLostArkCharacterInfoError(error)) {
+      throw error;
+    }
+
+    return {
+      ...sibling,
+      combatPower: null,
+    };
+  }
 }
 
 export async function syncLostArkCharactersForMember(input: {
@@ -43,7 +62,7 @@ export async function syncLostArkCharactersForMember(input: {
   );
   const profiles = await Promise.all(
     sameServerSiblings.map((sibling) =>
-      fetchLostArkCharacterProfile(sibling.characterName),
+      fetchLostArkCharacterProfileOrFallback(sibling),
     ),
   );
   if (
