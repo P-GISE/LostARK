@@ -60,23 +60,38 @@ model Group {
   notifications NotificationJob[]
 }
 
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  memberships  Member[]
+}
+
 model Member {
-  id                 String              @id @default(cuid())
-  groupId            String
-  group              Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  nickname           String
-  role               MemberRole          @default(MEMBER)
-  discordUserId      String?
-  discordConnectedAt DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  characters         Character[]
-  availabilityBlocks AvailabilityBlock[]
-  createdSchedules   Schedule[]          @relation("ScheduleCreator")
-  assignedSlots      ScheduleSlot[]
-  notifications      NotificationJob[]
+  id                  String               @id @default(cuid())
+  groupId             String
+  group               Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId              String?
+  user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  nickname            String
+  role                MemberRole           @default(MEMBER)
+  discordUserId       String?
+  discordConnectedAt  DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  characters          Character[]
+  availabilityBlocks  AvailabilityBlock[]
+  createdSchedules    Schedule[]           @relation("ScheduleCreator")
+  assignedSlots       ScheduleSlot[]
+  notifications       NotificationJob[]
+  scheduleAttendances ScheduleAttendance[]
 
   @@unique([groupId, nickname])
+  @@unique([groupId, userId])
+  @@index([userId])
 }
 
 model Character {
@@ -85,9 +100,13 @@ model Character {
   member        Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
   name          String
   className     String
-  itemLevel     Int
+  itemLevel     Float
   preferredRole SlotRole
   notes         String         @default("")
+  serverName    String         @default("")
+  combatPower   Int?
+  isMain        Boolean        @default(false)
+  lastSyncedAt  DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   scheduleSlots ScheduleSlot[]
@@ -109,19 +128,19 @@ model AvailabilityBlock {
 }
 
 model RaidTemplate {
-  id             String             @id @default(cuid())
-  groupId        String
-  group          Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  name           String
-  difficulty     String
-  gates          String
+  id              String             @id @default(cuid())
+  groupId         String
+  group           Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name            String
+  difficulty      String
+  gates           String
   requiredPlayers Int
-  requirements   String             @default("")
-  notes          String             @default("")
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  slots          RaidTemplateSlot[]
-  schedules      Schedule[]
+  requirements    String             @default("")
+  notes           String             @default("")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  slots           RaidTemplateSlot[]
+  schedules       Schedule[]
 }
 
 model RaidTemplateSlot {
@@ -137,26 +156,42 @@ model RaidTemplateSlot {
 }
 
 model Schedule {
-  id                String            @id @default(cuid())
+  id                String               @id @default(cuid())
   groupId           String
-  group             Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  templateId         String
-  template           RaidTemplate      @relation(fields: [templateId], references: [id])
+  group             Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  templateId        String
+  template          RaidTemplate         @relation(fields: [templateId], references: [id])
   title             String
   startsAt          DateTime
   endsAt            DateTime?
-  status            ScheduleStatus    @default(OPEN)
-  notes             String            @default("")
+  status            ScheduleStatus       @default(OPEN)
+  notes             String               @default("")
   createdByMemberId String
-  createdBy          Member            @relation("ScheduleCreator", fields: [createdByMemberId], references: [id])
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  slots              ScheduleSlot[]
-  notifications      NotificationJob[]
+  createdBy         Member               @relation("ScheduleCreator", fields: [createdByMemberId], references: [id])
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  slots             ScheduleSlot[]
+  notifications     NotificationJob[]
+  attendances       ScheduleAttendance[]
+}
+
+model ScheduleAttendance {
+  id         String             @id @default(cuid())
+  scheduleId String
+  schedule   Schedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  memberId   String
+  member     Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status     ConfirmationStatus @default(PENDING)
+  memo       String             @default("")
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([scheduleId, memberId])
+  @@index([memberId])
 }
 
 model ScheduleSlot {
-  id                 String             @id @default(cuid())
+  id                  String             @id @default(cuid())
   scheduleId          String
   schedule            Schedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   templateSlotId      String?

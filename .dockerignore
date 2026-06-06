@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.production
+.git
+.headroom-python
+.next
+.superpowers
+coverage
+node_modules
+out
+playwright-report
+test-results
+*.err.log
+*.log
+*.out.log
+prod-server-launcher-*.pid
+next-start-*.pid

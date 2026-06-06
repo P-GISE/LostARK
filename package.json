@@ -10,11 +10,12 @@
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/run-e2e.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "worker:notifications": "tsx src/worker/notification-worker.ts"
+    "worker:notifications": "tsx src/worker/notification-worker.ts",
+    "worker:characters": "tsx src/worker/character-sync-worker.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

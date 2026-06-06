@@ -29,7 +29,7 @@ describe("members", () => {
 
     await expect(
       joinGroupByInvite({ inviteCode: group.inviteCode, nickname: "Mokoko" }),
-    ).rejects.toThrow("Nickname is already used in this group");
+    ).rejects.toThrow("이 공대에서 이미 사용하는 닉네임입니다");
   });
 
   it("lists group members by creation order", async () => {

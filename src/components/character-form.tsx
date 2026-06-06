@@ -1,48 +1,65 @@
 "use client";
 
+import {
+  inputClassName,
+  primaryButtonClassName,
+  selectClassName,
+  textareaClassName,
+} from "@/components/ui";
+
 export function CharacterForm({
   action,
 }: {
   action: (formData: FormData) => void;
 }) {
   return (
-    <form action={action} className="grid gap-3 rounded border border-zinc-200 p-4">
+    <form action={action} className="grid gap-3">
       <input
         name="name"
         required
-        className="rounded border px-3 py-2"
-        placeholder="Character name"
+        className={inputClassName}
+        placeholder="캐릭터명"
       />
       <input
         name="className"
         required
-        className="rounded border px-3 py-2"
-        placeholder="Class"
+        className={inputClassName}
+        placeholder="직업"
       />
+      <input name="serverName" className={inputClassName} placeholder="서버" />
       <input
         name="itemLevel"
         required
+        step="0.01"
         type="number"
-        className="rounded border px-3 py-2"
-        placeholder="Item level"
+        className={inputClassName}
+        placeholder="아이템 레벨"
+      />
+      <input
+        name="combatPower"
+        min={0}
+        step={1}
+        type="number"
+        className={inputClassName}
+        placeholder="전투력"
       />
       <select
         name="preferredRole"
-        className="rounded border px-3 py-2"
+        className={selectClassName}
         defaultValue="DPS"
       >
-        <option value="DPS">DPS</option>
-        <option value="SUPPORT">Support</option>
-        <option value="FLEX">Flex</option>
-        <option value="OTHER">Other</option>
+        <option value="DPS">딜러</option>
+        <option value="SUPPORT">서폿</option>
+        <option value="FLEX">유동</option>
+        <option value="OTHER">기타</option>
       </select>
       <textarea
         name="notes"
-        className="rounded border px-3 py-2"
-        placeholder="Notes"
+        className={textareaClassName}
+        placeholder="메모"
       />
-      <button className="rounded bg-zinc-950 px-4 py-2 text-white">
-        Add character
+      <button className={primaryButtonClassName}>
+        캐릭터 추가
       </button>
     </form>
   );

@@ -9,7 +9,7 @@ import {
 describe("character display helpers", () => {
   const characters = [
     {
-      name: "낮은본캐",
+      name: "대표본캐",
       itemLevel: 1700,
       combatPower: 5000,
       isMain: true,
@@ -36,7 +36,7 @@ describe("character display helpers", () => {
 
   it("sorts main first, then item level, combat power, and name", () => {
     expect(sortCharactersForDisplay(characters).map((item) => item.name)).toEqual([
-      "낮은본캐",
+      "대표본캐",
       "강한부캐",
       "동렙고전투력",
       "동렙저전투력",
@@ -44,7 +44,7 @@ describe("character display helpers", () => {
 
     const nameTieCharacters = [
       {
-        name: "다가나",
+        name: "다나가",
         itemLevel: 1720,
         combatPower: 6100,
         isMain: false,
@@ -66,7 +66,7 @@ describe("character display helpers", () => {
     expect(sortCharactersForDisplay(nameTieCharacters).map((item) => item.name)).toEqual([
       "가나다",
       "나다가",
-      "다가나",
+      "다나가",
     ]);
   });
 

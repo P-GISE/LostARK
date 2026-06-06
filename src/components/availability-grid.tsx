@@ -1,50 +1,423 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useRef, useState, useTransition } from "react";
+import { availabilityHours } from "@/lib/availability-hours";
 
 type Status = "AVAILABLE" | "UNAVAILABLE" | "TENTATIVE";
+type CellStatus = Status | null;
 
-const hours = Array.from({ length: 10 }, (_, index) => index + 16);
-const labels: Record<Status, string> = {
-  AVAILABLE: "Available",
-  UNAVAILABLE: "Unavailable",
-  TENTATIVE: "Tentative",
+type Day = {
+  date: string;
+  label: string;
 };
 
+type AvailabilityChange = {
+  date: string;
+  hour: number;
+  status: CellStatus;
+};
+
+const labels: Record<Status, string> = {
+  AVAILABLE: "가능",
+  UNAVAILABLE: "불가",
+  TENTATIVE: "조율",
+};
+
+const statusClasses: Record<Status, string> = {
+  AVAILABLE: "border-emerald-300 bg-emerald-50 text-emerald-800",
+  UNAVAILABLE: "border-rose-300 bg-rose-50 text-rose-800",
+  TENTATIVE: "border-amber-300 bg-amber-50 text-amber-800",
+};
+
+const modeOptions: Array<{
+  label: string;
+  status: CellStatus;
+  className: string;
+}> = [
+  {
+    label: "가능",
+    status: "AVAILABLE",
+    className: statusClasses.AVAILABLE,
+  },
+  {
+    label: "조율",
+    status: "TENTATIVE",
+    className: statusClasses.TENTATIVE,
+  },
+  {
+    label: "불가",
+    status: "UNAVAILABLE",
+    className: statusClasses.UNAVAILABLE,
+  },
+  {
+    label: "지우기",
+    status: null,
+    className: "border-zinc-400 bg-zinc-100 text-zinc-800",
+  },
+];
+
+const defaultDays: Day[] = [{ date: "2026-06-04", label: "오늘" }];
+
+function slotKey(date: string, hour: number) {
+  return `${date}:${hour}`;
+}
+
+function displayHour(hour: number) {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function cellLabel(status: CellStatus) {
+  return status ? labels[status] : "미입력";
+}
+
+function nextStatuses(
+  current: Record<string, Status>,
+  changes: AvailabilityChange[],
+) {
+  const next = { ...current };
+
+  for (const change of changes) {
+    const key = slotKey(change.date, change.hour);
+    if (change.status) {
+      next[key] = change.status;
+    } else {
+      delete next[key];
+    }
+  }
+
+  return next;
+}
+
+function uniqueChanges(changes: AvailabilityChange[]) {
+  const map = new Map<string, AvailabilityChange>();
+
+  for (const change of changes) {
+    map.set(slotKey(change.date, change.hour), change);
+  }
+
+  return Array.from(map.values());
+}
+
 export function AvailabilityGrid({
-  date,
+  days = defaultDays,
+  initialStatuses = {},
   onChange,
 }: {
-  date: string;
-  onChange: (change: { date: string; hour: number; status: Status }) => void;
+  days?: Day[];
+  initialStatuses?: Record<string, Status>;
+  onChange: (changes: AvailabilityChange[]) => void;
 }) {
-  const [status, setStatus] = useState<Status>("AVAILABLE");
+  const [selectedStatus, setSelectedStatus] =
+    useState<CellStatus>("AVAILABLE");
+  const [selectedDayDates, setSelectedDayDates] = useState(
+    () => new Set(days.map((day) => day.date)),
+  );
+  const [rangeStartHour, setRangeStartHour] = useState(20);
+  const [rangeEndHour, setRangeEndHour] = useState(24);
+  const [statuses, setStatuses] =
+    useState<Record<string, Status>>(initialStatuses);
+  const [isPending, startTransition] = useTransition();
+  const [isPainting, setIsPainting] = useState(false);
+  const paintedKeysRef = useRef(new Set<string>());
+  const pointerHandledClickRef = useRef(false);
+
+  function commitChanges(changes: AvailabilityChange[]) {
+    const normalizedChanges = uniqueChanges(changes);
+    if (normalizedChanges.length === 0) return;
+
+    setStatuses((current) => nextStatuses(current, normalizedChanges));
+    startTransition(() => {
+      onChange(normalizedChanges);
+    });
+  }
+
+  function selectedChange(day: Day, hour: number): AvailabilityChange {
+    return {
+      date: day.date,
+      hour,
+      status: selectedStatus,
+    };
+  }
+
+  function paintCell(day: Day, hour: number) {
+    const key = slotKey(day.date, hour);
+    if (paintedKeysRef.current.has(key)) return;
+    paintedKeysRef.current.add(key);
+    commitChanges([selectedChange(day, hour)]);
+  }
+
+  function startPainting(day: Day, hour: number) {
+    pointerHandledClickRef.current = true;
+    paintedKeysRef.current = new Set();
+    setIsPainting(true);
+    paintCell(day, hour);
+  }
+
+  function stopPainting() {
+    setIsPainting(false);
+    paintedKeysRef.current = new Set();
+  }
+
+  function handleClick(day: Day, hour: number) {
+    if (pointerHandledClickRef.current) {
+      pointerHandledClickRef.current = false;
+      return;
+    }
+    commitChanges([selectedChange(day, hour)]);
+  }
+
+  function applyHours(hours: number[], targetDays = days) {
+    commitChanges(
+      targetDays.flatMap((day) =>
+        hours.map((hour) => selectedChange(day, hour)),
+      ),
+    );
+  }
+
+  function selectDaySet(mode: "all" | "weekday" | "weekend" | "none") {
+    const nextDays = days.filter((day) => {
+      if (mode === "all") return true;
+      if (mode === "none") return false;
+      const isWeekend = day.label === "토" || day.label === "일";
+      return mode === "weekend" ? isWeekend : !isWeekend;
+    });
+
+    setSelectedDayDates(new Set(nextDays.map((day) => day.date)));
+  }
+
+  function toggleDay(date: string) {
+    setSelectedDayDates((current) => {
+      const next = new Set(current);
+      if (next.has(date)) {
+        next.delete(date);
+      } else {
+        next.add(date);
+      }
+      return next;
+    });
+  }
+
+  function applySelectedRange() {
+    const targetDays = days.filter((day) => selectedDayDates.has(day.date));
+    const hours = availabilityHours.filter(
+      (hour) => hour >= rangeStartHour && hour < rangeEndHour,
+    );
+
+    applyHours(hours, targetDays);
+  }
+
+  const weekendDays = days.filter((day) =>
+    day.label === "토" || day.label === "일",
+  );
+  const selectedDayCount = selectedDayDates.size;
+  const canApplyRange =
+    selectedDayCount > 0 && rangeEndHour > rangeStartHour;
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        {(Object.keys(labels) as Status[]).map((key) => (
-          <button
-            className="rounded border border-zinc-300 px-3 py-1 text-sm"
-            key={key}
-            onClick={() => setStatus(key)}
-            type="button"
+    <div
+      className="space-y-4"
+      onPointerLeave={stopPainting}
+      onPointerUp={stopPainting}
+    >
+      <div className="grid gap-4 rounded-md border border-zinc-200 bg-white p-3">
+        <div className="grid gap-2">
+          <div className="text-xs font-semibold text-zinc-500">상태</div>
+          <div className="flex flex-wrap gap-2">
+          {modeOptions.map((option) => (
+            <button
+              aria-pressed={selectedStatus === option.status}
+              className={`h-9 rounded-md border px-3 text-sm font-medium transition ${
+                selectedStatus === option.status
+                  ? option.className
+                  : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50"
+              }`}
+              key={option.label}
+              onClick={() => setSelectedStatus(option.status)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+          {isPending ? (
+            <span className="inline-flex h-9 items-center text-sm text-zinc-500">
+              저장 중
+            </span>
+          ) : null}
+          </div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="grid gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-zinc-500">요일</span>
+              <button
+                className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                onClick={() => selectDaySet("all")}
+                type="button"
+              >
+                전체
+              </button>
+              <button
+                className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                onClick={() => selectDaySet("weekday")}
+                type="button"
+              >
+                평일
+              </button>
+              {weekendDays.length > 0 ? (
+                <button
+                  className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  onClick={() => selectDaySet("weekend")}
+                  type="button"
+                >
+                  주말
+                </button>
+              ) : null}
+              <button
+                className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                onClick={() => selectDaySet("none")}
+                type="button"
+              >
+                선택 해제
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {days.map((day) => {
+                const selected = selectedDayDates.has(day.date);
+                return (
+                  <button
+                    aria-pressed={selected}
+                    className={`h-9 rounded-md border px-3 text-sm font-medium transition ${
+                      selected
+                        ? "border-zinc-950 bg-zinc-950 text-white"
+                        : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                    }`}
+                    key={day.date}
+                    onClick={() => toggleDay(day.date)}
+                    type="button"
+                  >
+                    {`${day.label} ${day.date.slice(5)}`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[8.5rem_8.5rem_auto] sm:items-end">
+            <label className="grid gap-1 text-sm font-medium text-zinc-700">
+              시작 시간
+              <select
+                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                onChange={(event) => setRangeStartHour(Number(event.target.value))}
+                value={rangeStartHour}
+              >
+                {availabilityHours.map((hour) => (
+                  <option key={hour} value={hour}>
+                    {displayHour(hour)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-zinc-700">
+              끝 시간
+              <select
+                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                onChange={(event) => setRangeEndHour(Number(event.target.value))}
+                value={rangeEndHour}
+              >
+                {availabilityHours.map((hour) => (
+                  <option key={hour + 1} value={hour + 1}>
+                    {displayHour(hour + 1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:bg-zinc-300"
+              disabled={!canApplyRange}
+              onClick={applySelectedRange}
+              type="button"
+            >
+              선택 범위 적용
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        className="grid gap-1 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 p-2 select-none sm:gap-2 sm:p-3"
+        style={{
+          gridTemplateColumns: `4.75rem repeat(${days.length}, minmax(5.75rem, 1fr))`,
+        }}
+      >
+        <div className="sticky left-0 z-20 bg-zinc-50 text-xs font-medium text-zinc-500">
+          시간
+        </div>
+        {days.map((day) => (
+          <div
+            className="sticky top-0 z-10 rounded bg-zinc-50 px-1 text-xs font-medium text-zinc-600"
+            key={day.date}
           >
-            {labels[key]}
-          </button>
+            <div>{day.label}</div>
+            <div className="mt-0.5 text-zinc-400">{day.date.slice(5)}</div>
+          </div>
+        ))}
+        {availabilityHours.map((hour) => (
+          <Fragment key={hour}>
+            <button
+              aria-label={`${displayHour(hour)} 전체 입력`}
+              className="sticky left-0 z-10 flex min-h-11 items-center rounded border border-transparent bg-zinc-50 px-1 text-left text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-white sm:min-h-12"
+              onClick={() => applyHours([hour])}
+              type="button"
+            >
+              {displayHour(hour)}
+            </button>
+            {days.map((day) => {
+              const key = slotKey(day.date, hour);
+              const cellStatus = statuses[key];
+
+              return (
+                <button
+                  aria-label={`${day.label} ${displayHour(hour)} ${cellLabel(
+                    cellStatus ?? null,
+                  )}`}
+                  className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-zinc-50 sm:min-h-12 sm:px-3 ${
+                    cellStatus
+                      ? statusClasses[cellStatus]
+                      : "border-zinc-200 bg-white text-zinc-500"
+                  }`}
+                  key={key}
+                  onClick={() => handleClick(day, hour)}
+                  onPointerDown={() => startPainting(day, hour)}
+                  onPointerEnter={() => {
+                    if (isPainting) {
+                      paintCell(day, hour);
+                    }
+                  }}
+                  type="button"
+                >
+                  <span className="block font-medium">{displayHour(hour)}</span>
+                  <span className="mt-1 block text-xs">
+                    {cellLabel(cellStatus ?? null)}
+                  </span>
+                </button>
+              );
+            })}
+          </Fragment>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {hours.map((hour) => (
-          <button
-            className="rounded border border-zinc-200 px-3 py-4 text-left text-sm hover:bg-zinc-50"
-            key={hour}
-            onClick={() => onChange({ date, hour, status })}
-            type="button"
-          >
-            {hour}:00
-          </button>
-        ))}
+      <div className="grid gap-2 sm:grid-cols-3">
+        {(["AVAILABLE", "TENTATIVE", "UNAVAILABLE"] as Status[]).map((status) => {
+          const count = Object.values(statuses).filter(
+            (value) => value === status,
+          ).length;
+          return (
+            <div
+              className={`rounded-md border px-3 py-2 text-sm ${statusClasses[status]}`}
+              key={status}
+            >
+              <span className="font-medium">{labels[status]}</span>
+              <span className="ml-2">{count}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

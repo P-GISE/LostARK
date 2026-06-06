@@ -1,47 +1,104 @@
-import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  EmptyState,
+  SectionPanel,
+  inputClassName,
+  narrowContentClassName,
+  narrowPageShellClassName,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+} from "@/components/ui";
+import {
+  getCurrentUser,
+  requireCurrentUser,
+  setCurrentMemberSession,
+} from "@/server/auth-context";
+import { getGroupByInviteCode } from "@/server/groups";
 import { joinGroupByInvite } from "@/server/members";
 
-const COOKIE_NAME = process.env.SESSION_COOKIE_NAME ?? "lostark_party_member";
-
-export default function InvitePage({
+export default async function InvitePage({
   params,
 }: {
   params: Promise<{ inviteCode: string }>;
 }) {
+  const { inviteCode } = await params;
+  const group = await getGroupByInviteCode(inviteCode);
+  const user = await getCurrentUser();
+  const nextPath = `/invite/${inviteCode}`;
+
   async function join(formData: FormData) {
     "use server";
-    const { inviteCode } = await params;
+    const currentUser = await requireCurrentUser();
+    const inviteCode = String(formData.get("inviteCode") ?? "");
     const nickname = String(formData.get("nickname") ?? "");
-    const member = await joinGroupByInvite({ inviteCode, nickname });
-    const cookieStore = await cookies();
-    cookieStore.set(COOKIE_NAME, member.id, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
+    const member = await joinGroupByInvite({
+      inviteCode,
+      nickname,
+      userId: currentUser.id,
     });
+    await setCurrentMemberSession(member.id);
     redirect("/");
   }
 
+  if (!group || !group.inviteEnabled) {
+    return (
+      <main className={narrowPageShellClassName}>
+        <div className={narrowContentClassName}>
+          <EmptyState title="초대 링크가 잘못되었거나 비활성화되었습니다." />
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    const encodedNextPath = encodeURIComponent(nextPath);
+
+    return (
+      <main className={narrowPageShellClassName}>
+        <SectionPanel
+          className={narrowContentClassName}
+          description={`${group.name}에 참가하려면 먼저 로그인하거나 계정을 만들어야 합니다.`}
+          title="공대 참가"
+        >
+          <div className="grid gap-2">
+            <Link
+              className={primaryButtonClassName}
+              href={`/auth/signup?next=${encodedNextPath}`}
+            >
+              회원가입
+            </Link>
+            <Link
+              className={secondaryButtonClassName}
+              href={`/auth/login?next=${encodedNextPath}`}
+            >
+              로그인
+            </Link>
+          </div>
+        </SectionPanel>
+      </main>
+    );
+  }
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold">Join raid group</h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        Enter the nickname your group knows you by.
-      </p>
-      <form action={join} className="mt-6 space-y-3">
-        <input
-          name="nickname"
-          minLength={2}
-          required
-          className="w-full rounded border border-zinc-300 px-3 py-2"
-          placeholder="Nickname"
-        />
-        <button className="w-full rounded bg-zinc-950 px-4 py-2 text-white">
-          Join
-        </button>
-      </form>
+    <main className={narrowPageShellClassName}>
+      <SectionPanel
+        className={narrowContentClassName}
+        description={`${group.name}에서 사용할 닉네임을 입력하세요.`}
+        title="공대 참가"
+      >
+        <form action={join} className="space-y-3">
+          <input name="inviteCode" type="hidden" value={inviteCode} />
+          <input
+            className={inputClassName}
+            minLength={2}
+            name="nickname"
+            placeholder="닉네임"
+            required
+          />
+          <button className={primaryButtonClassName}>참가하기</button>
+        </form>
+      </SectionPanel>
     </main>
   );
 }
