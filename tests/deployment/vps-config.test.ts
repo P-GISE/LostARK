@@ -36,6 +36,14 @@ describe("VPS deployment config", () => {
     expect(compose).toContain('"127.0.0.1:3000:3000"');
   });
 
+  it("copies TypeScript path config into the runner image for worker scripts", () => {
+    const dockerfile = read("Dockerfile");
+
+    expect(dockerfile).toContain(
+      "COPY --from=builder /app/tsconfig.json ./tsconfig.json",
+    );
+  });
+
   it("keeps public Caddy exposure behind an explicit compose profile", () => {
     const compose = read("docker-compose.vps.yml");
 
