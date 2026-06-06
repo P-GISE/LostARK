@@ -1,1 +1,203 @@
-# LostARK
+# Lost Ark Party Planner
+
+Lost Ark raid and party scheduling app built with Next.js, Prisma, PostgreSQL,
+Discord OAuth/DM notifications, and Lost Ark Open API character sync.
+
+Production URL:
+
+```text
+https://lostark-party.pigs0516.com
+```
+
+## Features
+
+- Group invite and member management
+- Schedule, calendar, and template views
+- Main-character import from Lost Ark Open API
+- Same-server roster sync with item level and combat power
+- Discord OAuth connection for each member
+- Discord DM notifications for schedule creation and reminders
+- Notification worker and automatic character-sync worker
+- PC-primary, AWS-backup failover through Cloudflare Tunnel and AWS Lambda
+
+## Stack
+
+- Next.js App Router
+- React
+- Prisma
+- PostgreSQL
+- Vitest
+- Cloudflare Tunnel
+- AWS EC2, Lambda, and EventBridge for backup failover
+
+## Local Setup
+
+Install dependencies:
+
+```powershell
+npm install
+```
+
+Create `.env` from `.env.example` and fill the required values:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Start PostgreSQL locally:
+
+```powershell
+docker compose up -d postgres
+```
+
+Generate Prisma client and run migrations:
+
+```powershell
+npm run db:generate
+npm run db:migrate
+```
+
+Run the app in development:
+
+```powershell
+npm run dev
+```
+
+## Environment Variables
+
+Required for the core app:
+
+```text
+DATABASE_URL
+APP_BASE_URL
+APP_DOMAIN
+SESSION_SECRET
+ADMIN_EMAILS
+```
+
+Required for Discord OAuth and DM notifications:
+
+```text
+DISCORD_CLIENT_ID
+DISCORD_CLIENT_SECRET
+DISCORD_BOT_TOKEN
+DISCORD_REDIRECT_URI
+```
+
+Required for Lost Ark character sync:
+
+```text
+LOSTARK_OPEN_API_JWT
+```
+
+Optional:
+
+```text
+DISCORD_GUILD_ID
+DISCORD_TOKEN
+CHARACTER_SYNC_GROUP_ID
+SESSION_COOKIE_NAME
+```
+
+Do not commit real `.env` files, API tokens, Cloudflare tokens, AWS keys,
+Discord secrets, or Lost Ark API JWTs.
+
+## Discord OAuth
+
+The production Discord redirect URL must be registered in the Discord Developer
+Portal:
+
+```text
+https://lostark-party.pigs0516.com/api/discord/oauth/callback
+```
+
+The root-domain alias is also supported when registered:
+
+```text
+https://pigs0516.com/api/discord/oauth/callback
+```
+
+If Discord shows an invalid OAuth2 redirect URL error, check that the exact URL
+above is present in the application's OAuth2 Redirects list.
+
+## Production On Local PC
+
+Build the app:
+
+```powershell
+npm run build
+```
+
+Start the production server on port `3001`:
+
+```powershell
+$env:PORT = "3001"
+.\scripts\start-prod-server.ps1 -Restart
+```
+
+Start background workers:
+
+```powershell
+.\scripts\start-notification-worker.ps1
+.\scripts\start-character-sync-worker.ps1
+```
+
+The PC Cloudflare tunnel should route the public hostnames to:
+
+```text
+http://127.0.0.1:3001
+```
+
+Current public hostnames:
+
+```text
+lostark-party.pigs0516.com
+pigs0516.com
+pc.pigs0516.com
+```
+
+## AWS Backup Failover
+
+Failover deployment files are in:
+
+```text
+infra/aws-failover/
+```
+
+The failover controller checks the PC tunnel, keeps DNS pointed at the PC when
+healthy, and starts EC2 plus switches DNS to the AWS tunnel when the PC is down.
+
+Deploy the CloudFormation template in `ap-southeast-2` and pass live IDs/tokens
+as parameters. The template intentionally does not contain real Cloudflare
+account IDs, tunnel IDs, EC2 instance IDs, or API tokens.
+
+See:
+
+```text
+infra/aws-failover/README.md
+```
+
+## Scripts
+
+```powershell
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm test
+npm run worker:notifications
+npm run worker:characters
+```
+
+## Verification
+
+Before pushing code changes, run:
+
+```powershell
+npm test
+npm run lint
+npm run build
+```
+
+For README-only changes, at minimum check the Git diff and confirm no secrets
+are staged.
