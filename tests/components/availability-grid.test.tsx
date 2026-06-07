@@ -12,12 +12,8 @@ describe("AvailabilityGrid", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: /00:00 미입력/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /23:00 미입력/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /00:00 불가/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /23:00 불가/ })).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /24:00/ }),
     ).not.toBeInTheDocument();
@@ -55,7 +51,7 @@ describe("AvailabilityGrid", () => {
     ).toBeInTheDocument();
   });
 
-  it("clears a selected time cell back to missing", async () => {
+  it("clears a selected time cell back to default unavailable", async () => {
     const onChange = vi.fn();
     render(
       <AvailabilityGrid
@@ -65,7 +61,7 @@ describe("AvailabilityGrid", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "지우기" }));
+    await userEvent.click(screen.getByRole("button", { name: "불가" }));
     await userEvent.click(screen.getByRole("button", { name: /20:00 가능/ }));
 
     expect(onChange).toHaveBeenCalledWith([
@@ -76,7 +72,7 @@ describe("AvailabilityGrid", () => {
       },
     ]);
     expect(
-      screen.getByRole("button", { name: /20:00 미입력/ }),
+      screen.getByRole("button", { name: /20:00 불가/ }),
     ).toBeInTheDocument();
   });
 
@@ -103,7 +99,7 @@ describe("AvailabilityGrid", () => {
       { date: "2026-06-05", hour: 21, status: "TENTATIVE" },
     ]);
     expect(
-      screen.getByRole("button", { name: /목 20:00 미입력/ }),
+      screen.getByRole("button", { name: /목 20:00 불가/ }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /금 21:00 조율/ }),
@@ -164,9 +160,9 @@ describe("AvailabilityGrid", () => {
       />,
     );
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: /목 20:00 미입력/ }));
-    fireEvent.pointerEnter(screen.getByRole("button", { name: /목 21:00 미입력/ }));
-    fireEvent.pointerEnter(screen.getByRole("button", { name: /목 22:00 미입력/ }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: /목 20:00 불가/ }));
+    fireEvent.pointerEnter(screen.getByRole("button", { name: /목 21:00 불가/ }));
+    fireEvent.pointerEnter(screen.getByRole("button", { name: /목 22:00 불가/ }));
     fireEvent.pointerUp(screen.getByRole("button", { name: /목 22:00 가능/ }));
 
     expect(onChange).toHaveBeenCalledWith([

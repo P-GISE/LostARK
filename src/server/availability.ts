@@ -284,7 +284,7 @@ export async function getGroupAvailabilityOverview(input: {
         } else if (status === "UNAVAILABLE") {
           unavailableMembers.push(member.nickname);
         } else {
-          missingMembers.push(member.nickname);
+          unavailableMembers.push(member.nickname);
         }
       }
 

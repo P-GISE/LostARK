@@ -85,7 +85,7 @@ export function SectionPanel({
   return (
     <section
       className={cx(
-        "rounded-lg border border-slate-200 bg-white shadow-sm",
+        "min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm",
         className,
       )}
     >

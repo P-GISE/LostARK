@@ -91,7 +91,7 @@ describe("availability", () => {
     ).rejects.toThrow("지난 시간에는 가능 시간을 입력할 수 없습니다");
   });
 
-  it("clears an existing hourly slot back to missing", async () => {
+  it("clears an existing hourly slot back to default unavailable", async () => {
     const group = await createGroup({ name: "Slot Clear" });
     const member = await joinGroupByInvite({
       inviteCode: group.inviteCode,
@@ -177,8 +177,8 @@ describe("availability", () => {
         hour: 20,
         availableMembers: ["리더"],
         tentativeMembers: ["알파"],
-        unavailableMembers: [],
-        missingMembers: ["베타"],
+        unavailableMembers: ["베타"],
+        missingMembers: [],
       },
     ]);
   });

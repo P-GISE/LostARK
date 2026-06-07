@@ -17,12 +17,17 @@ function detailText(label: string, names: string[]) {
   return `${label}: ${namesText(names)}`;
 }
 
+function unavailableNames(slot: GroupAvailabilitySlot) {
+  return Array.from(
+    new Set([...slot.unavailableMembers, ...slot.missingMembers]),
+  );
+}
+
 function slotDetailText(slot: GroupAvailabilitySlot) {
   return [
     detailText("가능", slot.availableMembers),
     detailText("조율", slot.tentativeMembers),
-    detailText("불가", slot.unavailableMembers),
-    detailText("미입력", slot.missingMembers),
+    detailText("불가", unavailableNames(slot)),
   ].join(" / ");
 }
 
@@ -31,10 +36,9 @@ function secondaryCounts(slot: GroupAvailabilitySlot) {
     slot.tentativeMembers.length > 0
       ? `조율 ${slot.tentativeMembers.length}`
       : null,
-    slot.unavailableMembers.length > 0
-      ? `불가 ${slot.unavailableMembers.length}`
+    unavailableNames(slot).length > 0
+      ? `불가 ${unavailableNames(slot).length}`
       : null,
-    slot.missingMembers.length > 0 ? `미입력 ${slot.missingMembers.length}` : null,
   ].filter((count): count is string => Boolean(count));
 }
 
@@ -57,9 +61,9 @@ function recommendedSlots(slots: GroupAvailabilitySlot[]) {
         return tentativeDiff;
       }
 
-      const missingDiff = a.missingMembers.length - b.missingMembers.length;
-      if (missingDiff !== 0) {
-        return missingDiff;
+      const unavailableDiff = unavailableNames(a).length - unavailableNames(b).length;
+      if (unavailableDiff !== 0) {
+        return unavailableDiff;
       }
 
       return a.date === b.date ? a.hour - b.hour : a.date.localeCompare(b.date);
@@ -119,7 +123,7 @@ export function AvailabilityOverview({
                     {`가능 ${slot.availableMembers.length}`}
                   </span>
                   <span>{`조율 ${slot.tentativeMembers.length}`}</span>
-                  <span>{`미입력 ${slot.missingMembers.length}`}</span>
+                  <span>{`불가 ${unavailableNames(slot).length}`}</span>
                 </div>
                 {slot.availableMembers.length > 0 ? (
                   <div className="mt-2 truncate text-xs text-zinc-500">
@@ -224,9 +228,9 @@ export function AvailabilityOverview({
                             {detailText("조율", slot.tentativeMembers)}
                           </div>
                         ) : null}
-                        {slot.unavailableMembers.length > 0 ? (
+                        {unavailableNames(slot).length > 0 ? (
                           <div className="truncate text-xs text-rose-800">
-                            {detailText("불가", slot.unavailableMembers)}
+                            {detailText("불가", unavailableNames(slot))}
                           </div>
                         ) : null}
                       </div>

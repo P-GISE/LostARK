@@ -46,13 +46,8 @@ const modeOptions: Array<{
   },
   {
     label: "불가",
-    status: "UNAVAILABLE",
-    className: statusClasses.UNAVAILABLE,
-  },
-  {
-    label: "지우기",
     status: null,
-    className: "border-zinc-400 bg-zinc-100 text-zinc-800",
+    className: statusClasses.UNAVAILABLE,
   },
 ];
 
@@ -67,7 +62,7 @@ function displayHour(hour: number) {
 }
 
 function cellLabel(status: CellStatus) {
-  return status ? labels[status] : "미입력";
+  return status ? labels[status] : "불가";
 }
 
 function nextStatuses(
@@ -245,6 +240,28 @@ export function AvailabilityGrid({
     (hour) => hour >= rangeStartHour && hour < rangeEndHour,
   );
   const selectedRangeDays = days.filter((day) => selectedDayDates.has(day.date));
+  const editableSlotCount = days.reduce(
+    (total, day) =>
+      total +
+      availabilityHours.filter((hour) => !isSlotDisabled(day.date, hour))
+        .length,
+    0,
+  );
+  const availableCount = Object.entries(statuses).filter(
+    ([key, value]) => value === "AVAILABLE" && !disabledSlots.has(key),
+  ).length;
+  const tentativeCount = Object.entries(statuses).filter(
+    ([key, value]) => value === "TENTATIVE" && !disabledSlots.has(key),
+  ).length;
+  const unavailableCount = Math.max(
+    0,
+    editableSlotCount - availableCount - tentativeCount,
+  );
+  const summaryCounts: Record<Status, number> = {
+    AVAILABLE: availableCount,
+    TENTATIVE: tentativeCount,
+    UNAVAILABLE: unavailableCount,
+  };
   const canApplyRange =
     selectedDayCount > 0 &&
     rangeEndHour > rangeStartHour &&
@@ -425,6 +442,7 @@ export function AvailabilityGrid({
             {days.map((day) => {
               const key = slotKey(day.date, hour);
               const cellStatus = statuses[key];
+              const displayStatus = cellStatus ?? "UNAVAILABLE";
               const disabled = isSlotDisabled(day.date, hour);
 
               return (
@@ -435,9 +453,7 @@ export function AvailabilityGrid({
                   className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-zinc-50 sm:min-h-12 sm:px-3 ${
                     disabled
                       ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 hover:bg-zinc-100"
-                      : cellStatus
-                      ? statusClasses[cellStatus]
-                      : "border-zinc-200 bg-white text-zinc-500"
+                      : statusClasses[displayStatus]
                   }`}
                   disabled={disabled}
                   key={key}
@@ -463,16 +479,13 @@ export function AvailabilityGrid({
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
         {(["AVAILABLE", "TENTATIVE", "UNAVAILABLE"] as Status[]).map((status) => {
-          const count = Object.entries(statuses).filter(
-            ([key, value]) => value === status && !disabledSlots.has(key),
-          ).length;
           return (
             <div
               className={`rounded-md border px-3 py-2 text-sm ${statusClasses[status]}`}
               key={status}
             >
               <span className="font-medium">{labels[status]}</span>
-              <span className="ml-2">{count}</span>
+              <span className="ml-2">{summaryCounts[status]}</span>
             </div>
           );
         })}

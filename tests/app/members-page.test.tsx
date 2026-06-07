@@ -3,8 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import MembersPage from "@/app/members/page";
 
 const mocks = vi.hoisted(() => ({
+  listCharacterRaidChecksForGroup: vi.fn(),
   listMembers: vi.fn(),
+  listRaidTemplates: vi.fn(),
   requireCurrentMember: vi.fn(),
+  setCharacterRaidCheck: vi.fn(),
   syncLostArkCharactersForMember: vi.fn(),
 }));
 
@@ -16,8 +19,17 @@ vi.mock("@/server/character-sync", () => ({
   syncLostArkCharactersForMember: mocks.syncLostArkCharactersForMember,
 }));
 
+vi.mock("@/server/character-raid-checks", () => ({
+  listCharacterRaidChecksForGroup: mocks.listCharacterRaidChecksForGroup,
+  setCharacterRaidCheck: mocks.setCharacterRaidCheck,
+}));
+
 vi.mock("@/server/members", () => ({
   listMembers: mocks.listMembers,
+}));
+
+vi.mock("@/server/raid-templates", () => ({
+  listRaidTemplates: mocks.listRaidTemplates,
 }));
 
 describe("MembersPage", () => {
@@ -25,6 +37,7 @@ describe("MembersPage", () => {
     mocks.requireCurrentMember.mockResolvedValue({
       groupId: "group-1",
       id: "member-1",
+      role: "LEADER",
     });
     mocks.listMembers.mockResolvedValue([
       {
@@ -46,6 +59,29 @@ describe("MembersPage", () => {
         ],
       },
     ]);
+    mocks.listRaidTemplates.mockResolvedValue([
+      {
+        difficulty: "하드",
+        gates: "1-4",
+        id: "template-1",
+        name: "카멘",
+        slots: [],
+      },
+      {
+        difficulty: "노말",
+        gates: "1-3",
+        id: "template-2",
+        name: "상아탑",
+        slots: [],
+      },
+    ]);
+    mocks.listCharacterRaidChecksForGroup.mockResolvedValue([
+      {
+        characterId: "character-1",
+        raidTemplateId: "template-1",
+        weekStartDate: "2026-06-03",
+      },
+    ]);
 
     render(await MembersPage());
 
@@ -60,5 +96,13 @@ describe("MembersPage", () => {
     expect(screen.queryByText("숨겨야 하는 메모")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "저장" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "삭제" })).not.toBeInTheDocument();
+    expect(screen.getByText("이번 주 보스 체크")).toBeInTheDocument();
+    expect(screen.getByText("1/2 완료")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "카멘 · 하드 · 1-4관문 완료 해제" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "상아탑 · 노말 · 1-3관문 완료 처리" }),
+    ).toBeInTheDocument();
   });
 });

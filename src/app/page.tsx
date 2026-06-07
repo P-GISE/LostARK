@@ -75,8 +75,8 @@ export default async function HomePage() {
           value={summary.memberCount}
         />
         <MetricCard
-          detail="이번 주 가능 시간을 아직 입력하지 않은 인원"
-          label="가능 시간 미입력"
+          detail="이번 주 가능 시간을 아직 조율하지 않은 인원"
+          label="가능 시간 조율 전"
           value={summary.missingAvailabilityCount}
         />
         <MetricCard

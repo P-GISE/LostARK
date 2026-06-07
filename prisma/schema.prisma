@@ -95,21 +95,22 @@ model Member {
 }
 
 model Character {
-  id            String         @id @default(cuid())
+  id            String               @id @default(cuid())
   memberId      String
-  member        Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member        Member               @relation(fields: [memberId], references: [id], onDelete: Cascade)
   name          String
   className     String
   itemLevel     Float
   preferredRole SlotRole
-  notes         String         @default("")
-  serverName    String         @default("")
+  notes         String               @default("")
+  serverName    String               @default("")
   combatPower   Int?
-  isMain        Boolean        @default(false)
+  isMain        Boolean              @default(false)
   lastSyncedAt  DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
   scheduleSlots ScheduleSlot[]
+  raidChecks    CharacterRaidCheck[]
 }
 
 model AvailabilityBlock {
@@ -128,19 +129,36 @@ model AvailabilityBlock {
 }
 
 model RaidTemplate {
-  id              String             @id @default(cuid())
-  groupId         String
-  group           Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  name            String
-  difficulty      String
-  gates           String
-  requiredPlayers Int
-  requirements    String             @default("")
-  notes           String             @default("")
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  slots           RaidTemplateSlot[]
-  schedules       Schedule[]
+  id                  String               @id @default(cuid())
+  groupId             String
+  group               Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name                String
+  difficulty          String
+  gates               String
+  requiredPlayers     Int
+  requirements        String               @default("")
+  notes               String               @default("")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  slots               RaidTemplateSlot[]
+  schedules           Schedule[]
+  characterRaidChecks CharacterRaidCheck[]
+}
+
+model CharacterRaidCheck {
+  id             String       @id @default(cuid())
+  characterId    String
+  character      Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  raidTemplateId String
+  raidTemplate   RaidTemplate @relation(fields: [raidTemplateId], references: [id], onDelete: Cascade)
+  weekStartDate  String
+  completedAt    DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([characterId, raidTemplateId, weekStartDate])
+  @@index([raidTemplateId])
+  @@index([weekStartDate])
 }
 
 model RaidTemplateSlot {

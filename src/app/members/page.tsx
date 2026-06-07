@@ -9,13 +9,24 @@ import {
   EmptyState,
   PageHeader,
   SectionPanel,
+  cx,
   pageShellClassName,
 } from "@/components/ui";
 import { formatCombatPower, formatItemLevel } from "@/lib/character-display";
+import { getLostArkWeekStartDate } from "@/lib/lostark-week";
+import {
+  compareRaidTemplateDisplay,
+  formatRaidTemplateLabel,
+} from "@/lib/raid-template-display";
+import {
+  listCharacterRaidChecksForGroup,
+  setCharacterRaidCheck,
+} from "@/server/character-raid-checks";
 import { syncLostArkCharactersForMember } from "@/server/character-sync";
 import { requireCurrentMember } from "@/server/auth-context";
 import { createCharacter } from "@/server/characters";
 import { listMembers } from "@/server/members";
+import { listRaidTemplates } from "@/server/raid-templates";
 
 const preferredRoles = ["DPS", "SUPPORT", "FLEX", "OTHER"] as const;
 
@@ -58,9 +69,144 @@ function getLatestSyncedAt(
   }, null);
 }
 
+type RaidTemplateForChecklist = Awaited<
+  ReturnType<typeof listRaidTemplates>
+>[number];
+
+function raidCheckKey(characterId: string, raidTemplateId: string) {
+  return `${characterId}:${raidTemplateId}`;
+}
+
+function canEditCharacterChecklist(input: {
+  currentMemberId: string;
+  currentMemberRole: string;
+  ownerMemberId: string;
+}) {
+  return (
+    input.currentMemberRole === "LEADER" ||
+    input.currentMemberId === input.ownerMemberId
+  );
+}
+
+function CharacterRaidChecklist({
+  action,
+  canEdit,
+  characterId,
+  completedKeys,
+  templates,
+  weekStartDate,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  canEdit: boolean;
+  characterId: string;
+  completedKeys: Set<string>;
+  templates: RaidTemplateForChecklist[];
+  weekStartDate: string;
+}) {
+  const completedCount = templates.filter((template) =>
+    completedKeys.has(raidCheckKey(characterId, template.id)),
+  ).length;
+  const allTemplatesCompleted =
+    templates.length > 0 && completedCount === templates.length;
+
+  return (
+    <div className="mt-4 border-t border-slate-200 pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-semibold text-slate-900">
+          이번 주 보스 체크
+        </div>
+        <Badge tone={allTemplatesCompleted ? "success" : "neutral"}>
+          {completedCount}/{templates.length} 완료
+        </Badge>
+      </div>
+      {templates.length === 0 ? (
+        <div className="mt-3 text-xs text-slate-500">
+          등록된 레이드 템플릿이 없습니다.
+        </div>
+      ) : (
+        <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto pr-1">
+          {templates.map((template) => {
+            const label = formatRaidTemplateLabel(template);
+            const completed = completedKeys.has(
+              raidCheckKey(characterId, template.id),
+            );
+            const actionLabel = completed ? "완료 해제" : "완료 처리";
+            const buttonClassName = cx(
+              "flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-xs font-medium transition",
+              completed
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900",
+            );
+
+            if (!canEdit) {
+              return (
+                <div
+                  aria-label={`${label} ${completed ? "완료" : "미완료"}`}
+                  className={buttonClassName}
+                  key={template.id}
+                >
+                  <span className="min-w-0 truncate">{label}</span>
+                  <span className="shrink-0 text-[11px] font-semibold">
+                    {completed ? "완료" : "미완료"}
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <form action={action} key={template.id}>
+                <input name="characterId" type="hidden" value={characterId} />
+                <input
+                  name="raidTemplateId"
+                  type="hidden"
+                  value={template.id}
+                />
+                <input
+                  name="weekStartDate"
+                  type="hidden"
+                  value={weekStartDate}
+                />
+                <input
+                  name="completed"
+                  type="hidden"
+                  value={String(!completed)}
+                />
+                <button
+                  aria-label={`${label} ${actionLabel}`}
+                  className={buttonClassName}
+                  type="submit"
+                >
+                  <span className="min-w-0 truncate">{label}</span>
+                  <span className="shrink-0 text-[11px] font-semibold">
+                    {completed ? "완료" : "미완료"}
+                  </span>
+                </button>
+              </form>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default async function MembersPage() {
   const currentMember = await requireCurrentMember();
-  const members = await listMembers(currentMember.groupId);
+  const weekStartDate = getLostArkWeekStartDate();
+  const [members, raidTemplates, raidChecks] = await Promise.all([
+    listMembers(currentMember.groupId),
+    listRaidTemplates(currentMember.groupId),
+    listCharacterRaidChecksForGroup({
+      groupId: currentMember.groupId,
+      weekStartDate,
+    }),
+  ]);
+  const checklistTemplates = [...raidTemplates].sort(compareRaidTemplateDisplay);
+  const completedKeys = new Set(
+    raidChecks.map((check) =>
+      raidCheckKey(check.characterId, check.raidTemplateId),
+    ),
+  );
 
   async function syncCharacters(
     _state: CharacterSyncFormState,
@@ -101,6 +247,19 @@ export default async function MembersPage() {
     revalidatePath("/members");
   }
 
+  async function toggleRaidCheck(formData: FormData) {
+    "use server";
+    const member = await requireCurrentMember();
+    await setCharacterRaidCheck({
+      actorMemberId: member.id,
+      characterId: String(formData.get("characterId") ?? ""),
+      completed: String(formData.get("completed") ?? "") === "true",
+      raidTemplateId: String(formData.get("raidTemplateId") ?? ""),
+      weekStartDate: String(formData.get("weekStartDate") ?? ""),
+    });
+    revalidatePath("/members");
+  }
+
   return (
     <main className={pageShellClassName}>
       <PageHeader
@@ -109,7 +268,7 @@ export default async function MembersPage() {
         title="공대원"
       />
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,24rem)_1fr]">
-        <div className="grid content-start gap-4">
+        <div className="grid min-w-0 content-start gap-4">
           <SectionPanel
             description="처음 등록하거나 본캐를 바꿀 때만 입력합니다. 이후 캐릭터 정보는 서버에서 자동으로 갱신됩니다."
             title="본캐로 캐릭터 불러오기"
@@ -131,7 +290,7 @@ export default async function MembersPage() {
             <CharacterForm action={addManualCharacter} />
           </SectionPanel>
         </div>
-        <section className="grid content-start gap-4">
+        <section className="grid min-w-0 content-start gap-4">
           {members.map((member) => {
             const latestSyncedAt = getLatestSyncedAt(member.characters);
 
@@ -144,10 +303,10 @@ export default async function MembersPage() {
                 {member.characters.length === 0 ? (
                   <EmptyState title="등록된 캐릭터가 없습니다." />
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {member.characters.map((character) => (
                       <div
-                        className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                        className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4"
                         key={character.id}
                       >
                         <div className="flex flex-wrap items-center gap-2">
@@ -181,6 +340,18 @@ export default async function MembersPage() {
                         <div className="mt-3 text-xs text-slate-500">
                           갱신: {formatSyncedAt(character.lastSyncedAt)}
                         </div>
+                        <CharacterRaidChecklist
+                          action={toggleRaidCheck}
+                          canEdit={canEditCharacterChecklist({
+                            currentMemberId: currentMember.id,
+                            currentMemberRole: currentMember.role,
+                            ownerMemberId: member.id,
+                          })}
+                          characterId={character.id}
+                          completedKeys={completedKeys}
+                          templates={checklistTemplates}
+                          weekStartDate={weekStartDate}
+                        />
                       </div>
                     ))}
                   </div>
