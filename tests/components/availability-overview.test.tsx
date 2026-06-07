@@ -6,6 +6,7 @@ describe("AvailabilityOverview", () => {
   it("ranks recommended time candidates by available members first", () => {
     render(
       <AvailabilityOverview
+        now={new Date("2026-06-04T00:00:00.000Z")}
         slots={[
           {
             date: "2026-06-04",
@@ -62,6 +63,7 @@ describe("AvailabilityOverview", () => {
   it("shows group availability counts and member names for each slot", () => {
     render(
       <AvailabilityOverview
+        now={new Date("2026-06-04T00:00:00.000Z")}
         slots={[
           {
             date: "2026-06-04",
@@ -102,6 +104,7 @@ describe("AvailabilityOverview", () => {
   it("normalizes next-day hours in schedule creation links", () => {
     render(
       <AvailabilityOverview
+        now={new Date("2026-06-04T00:00:00.000Z")}
         slots={[
           {
             date: "2026-06-04",
@@ -121,5 +124,37 @@ describe("AvailabilityOverview", () => {
       "href",
       "/schedules?startsAt=2026-06-05T01%3A00%3A00%2B09%3A00&from=availability",
     );
+  });
+
+  it("excludes past slots from recommended time candidates", () => {
+    render(
+      <AvailabilityOverview
+        now={new Date("2026-06-05T11:00:00.000Z")}
+        slots={[
+          {
+            date: "2026-06-05",
+            hour: 19,
+            availableMembers: ["Leader", "Alpha", "Beta"],
+            tentativeMembers: [],
+            unavailableMembers: [],
+            missingMembers: [],
+          },
+          {
+            date: "2026-06-05",
+            hour: 21,
+            availableMembers: ["Leader"],
+            tentativeMembers: [],
+            unavailableMembers: ["Alpha", "Beta"],
+            missingMembers: [],
+          },
+        ]}
+      />,
+    );
+
+    const candidates = screen.getAllByRole("listitem");
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toHaveTextContent("06-05 21:00");
+    expect(candidates[0]).not.toHaveTextContent("19:00");
   });
 });

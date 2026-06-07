@@ -4,6 +4,7 @@ import {
   type GroupAvailabilitySlot,
 } from "@/server/availability";
 import { getKoreanWeekdayLabel } from "@/lib/lostark-week";
+import { isKstAvailabilitySlotInPast } from "@/lib/time-slots";
 
 function displayHour(hour: number) {
   return `${String(hour).padStart(2, "0")}:00`;
@@ -192,8 +193,10 @@ function SlotRoster({ slot }: { slot: GroupAvailabilitySlot }) {
 }
 
 export function AvailabilityOverview({
+  now = new Date(),
   slots,
 }: {
+  now?: Date;
   slots: GroupAvailabilitySlot[];
 }) {
   const dates = Array.from(new Set(slots.map((slot) => slot.date)));
@@ -203,13 +206,16 @@ export function AvailabilityOverview({
   const slotMap = new Map(
     slots.map((slot) => [`${slot.date}:${slot.hour}`, slot]),
   );
-  const candidates = recommendedSlots(slots);
-  const coordinationNeeded = coordinationNeededMembers(slots);
-  const bestSlot = bestAvailabilitySlot(slots);
+  const futureSlots = slots.filter(
+    (slot) => !isKstAvailabilitySlotInPast(slot.date, slot.hour, now),
+  );
+  const candidates = recommendedSlots(futureSlots);
+  const coordinationNeeded = coordinationNeededMembers(futureSlots);
+  const bestSlot = bestAvailabilitySlot(futureSlots);
   const detailSlots =
     candidates.length > 0
       ? candidates
-      : slots
+      : futureSlots
           .filter(
             (slot) =>
               slot.availableMembers.length > 0 ||
