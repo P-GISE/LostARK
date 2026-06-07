@@ -106,7 +106,7 @@ describe("AvailabilityGrid", () => {
     ).toBeInTheDocument();
   });
 
-  it("disables past slots and skips them during range apply", async () => {
+  it("hides past slots and skips them during range apply", async () => {
     const onChange = vi.fn();
     render(
       <AvailabilityGrid
@@ -117,13 +117,9 @@ describe("AvailabilityGrid", () => {
       />,
     );
 
-    const disabledCell = screen.getByRole("button", {
-      name: /목 20:00 지난 시간/,
-    });
-    expect(disabledCell).toBeDisabled();
-
-    await userEvent.click(disabledCell);
-    expect(onChange).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: /목 20:00/ }),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "조율" }));
     await userEvent.selectOptions(screen.getByLabelText("시작 시간"), "20");

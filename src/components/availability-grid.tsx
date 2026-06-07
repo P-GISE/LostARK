@@ -108,19 +108,28 @@ export function AvailabilityGrid({
     () => new Set(disabledSlotKeys),
     [disabledSlotKeys],
   );
+  const visibleDays = useMemo(
+    () =>
+      days.filter((day) =>
+        availabilityHours.some(
+          (hour) => !disabledSlots.has(slotKey(day.date, hour)),
+        ),
+      ),
+    [days, disabledSlots],
+  );
+  const visibleHours = useMemo(
+    () =>
+      availabilityHours.filter((hour) =>
+        visibleDays.some(
+          (day) => !disabledSlots.has(slotKey(day.date, hour)),
+        ),
+      ),
+    [disabledSlots, visibleDays],
+  );
   const [selectedStatus, setSelectedStatus] =
     useState<CellStatus>("AVAILABLE");
   const [selectedDayDates, setSelectedDayDates] = useState(
-    () =>
-      new Set(
-        days
-          .filter((day) =>
-            availabilityHours.some(
-              (hour) => !disabledSlots.has(slotKey(day.date, hour)),
-            ),
-          )
-          .map((day) => day.date),
-      ),
+    () => new Set(visibleDays.map((day) => day.date)),
   );
   const [rangeStartHour, setRangeStartHour] = useState(20);
   const [rangeEndHour, setRangeEndHour] = useState(24);
@@ -186,7 +195,7 @@ export function AvailabilityGrid({
     commitChanges([selectedChange(day, hour)]);
   }
 
-  function applyHours(hours: number[], targetDays = days) {
+  function applyHours(hours: number[], targetDays = visibleDays) {
     commitChanges(
       targetDays.flatMap((day) =>
         hours
@@ -197,7 +206,7 @@ export function AvailabilityGrid({
   }
 
   function selectDaySet(mode: "all" | "weekday" | "weekend" | "none") {
-    const nextDays = days.filter((day) => {
+    const nextDays = visibleDays.filter((day) => {
       if (isDayFullyDisabled(day)) return false;
       if (mode === "all") return true;
       if (mode === "none") return false;
@@ -209,7 +218,7 @@ export function AvailabilityGrid({
   }
 
   function toggleDay(date: string) {
-    const day = days.find((candidate) => candidate.date === date);
+    const day = visibleDays.find((candidate) => candidate.date === date);
     if (day && isDayFullyDisabled(day)) return;
 
     setSelectedDayDates((current) => {
@@ -224,7 +233,7 @@ export function AvailabilityGrid({
   }
 
   function applySelectedRange() {
-    const targetDays = days.filter((day) => selectedDayDates.has(day.date));
+    const targetDays = visibleDays.filter((day) => selectedDayDates.has(day.date));
     const hours = availabilityHours.filter(
       (hour) => hour >= rangeStartHour && hour < rangeEndHour,
     );
@@ -232,15 +241,17 @@ export function AvailabilityGrid({
     applyHours(hours, targetDays);
   }
 
-  const weekendDays = days.filter((day) =>
+  const weekendDays = visibleDays.filter((day) =>
     day.label === "토" || day.label === "일",
   );
   const selectedDayCount = selectedDayDates.size;
   const selectedRangeHours = availabilityHours.filter(
     (hour) => hour >= rangeStartHour && hour < rangeEndHour,
   );
-  const selectedRangeDays = days.filter((day) => selectedDayDates.has(day.date));
-  const editableSlotCount = days.reduce(
+  const selectedRangeDays = visibleDays.filter((day) =>
+    selectedDayDates.has(day.date),
+  );
+  const editableSlotCount = visibleDays.reduce(
     (total, day) =>
       total +
       availabilityHours.filter((hour) => !isSlotDisabled(day.date, hour))
@@ -337,7 +348,7 @@ export function AvailabilityGrid({
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {days.map((day) => {
+              {visibleDays.map((day) => {
                 const selected = selectedDayDates.has(day.date);
                 const disabled = isDayFullyDisabled(day);
                 return (
@@ -404,13 +415,13 @@ export function AvailabilityGrid({
       <div
         className="grid gap-1 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 p-2 select-none sm:gap-2 sm:p-3"
         style={{
-          gridTemplateColumns: `4.75rem repeat(${days.length}, minmax(5.75rem, 1fr))`,
+          gridTemplateColumns: `4.75rem repeat(${visibleDays.length}, minmax(5.75rem, 1fr))`,
         }}
       >
         <div className="sticky left-0 z-20 bg-zinc-50 text-xs font-medium text-zinc-500">
           시간
         </div>
-        {days.map((day) => (
+        {visibleDays.map((day) => (
           <div
             className="sticky top-0 z-10 rounded bg-zinc-50 px-1 text-xs font-medium text-zinc-600"
             key={day.date}
@@ -419,8 +430,8 @@ export function AvailabilityGrid({
             <div className="mt-0.5 text-zinc-400">{day.date.slice(5)}</div>
           </div>
         ))}
-        {availabilityHours.map((hour) => {
-          const isHourDisabled = days.every((day) =>
+        {visibleHours.map((hour) => {
+          const isHourDisabled = visibleDays.every((day) =>
             isSlotDisabled(day.date, hour),
           );
 
@@ -439,23 +450,28 @@ export function AvailabilityGrid({
             >
               {displayHour(hour)}
             </button>
-            {days.map((day) => {
+            {visibleDays.map((day) => {
               const key = slotKey(day.date, hour);
               const cellStatus = statuses[key];
               const displayStatus = cellStatus ?? "UNAVAILABLE";
               const disabled = isSlotDisabled(day.date, hour);
 
+              if (disabled) {
+                return (
+                  <div
+                    aria-hidden="true"
+                    className="min-h-11 rounded-md border border-transparent sm:min-h-12"
+                    key={key}
+                  />
+                );
+              }
+
               return (
                 <button
-                  aria-label={`${day.label} ${displayHour(hour)} ${
-                    disabled ? "지난 시간" : cellLabel(cellStatus ?? null)
-                  }`}
-                  className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-zinc-50 sm:min-h-12 sm:px-3 ${
-                    disabled
-                      ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 hover:bg-zinc-100"
-                      : statusClasses[displayStatus]
-                  }`}
-                  disabled={disabled}
+                  aria-label={`${day.label} ${displayHour(hour)} ${cellLabel(
+                    cellStatus ?? null,
+                  )}`}
+                  className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-zinc-50 sm:min-h-12 sm:px-3 ${statusClasses[displayStatus]}`}
                   key={key}
                   onClick={() => handleClick(day, hour)}
                   onPointerDown={() => startPainting(day, hour)}
@@ -468,7 +484,7 @@ export function AvailabilityGrid({
                 >
                   <span className="block font-medium">{displayHour(hour)}</span>
                   <span className="mt-1 block text-xs">
-                    {disabled ? "지난 시간" : cellLabel(cellStatus ?? null)}
+                    {cellLabel(cellStatus ?? null)}
                   </span>
                 </button>
               );

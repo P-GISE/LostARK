@@ -157,4 +157,35 @@ describe("AvailabilityOverview", () => {
     expect(candidates[0]).toHaveTextContent("06-05 21:00");
     expect(candidates[0]).not.toHaveTextContent("19:00");
   });
+
+  it("excludes past slots from overview summary and density table", () => {
+    render(
+      <AvailabilityOverview
+        now={new Date("2026-06-05T11:00:00.000Z")}
+        slots={[
+          {
+            date: "2026-06-05",
+            hour: 19,
+            availableMembers: ["Leader", "Alpha", "Beta"],
+            tentativeMembers: [],
+            unavailableMembers: [],
+            missingMembers: [],
+          },
+          {
+            date: "2026-06-05",
+            hour: 21,
+            availableMembers: ["Leader"],
+            tentativeMembers: [],
+            unavailableMembers: ["Alpha", "Beta"],
+            missingMembers: [],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("06-05")).toBeInTheDocument();
+    expect(screen.getByText("21:00")).toBeInTheDocument();
+    expect(screen.queryByText("19:00")).not.toBeInTheDocument();
+    expect(screen.queryByText("3/3명")).not.toBeInTheDocument();
+  });
 });

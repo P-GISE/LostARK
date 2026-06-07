@@ -199,15 +199,15 @@ export function AvailabilityOverview({
   now?: Date;
   slots: GroupAvailabilitySlot[];
 }) {
-  const dates = Array.from(new Set(slots.map((slot) => slot.date)));
-  const hours = Array.from(new Set(slots.map((slot) => slot.hour))).sort(
+  const futureSlots = slots.filter(
+    (slot) => !isKstAvailabilitySlotInPast(slot.date, slot.hour, now),
+  );
+  const dates = Array.from(new Set(futureSlots.map((slot) => slot.date)));
+  const hours = Array.from(new Set(futureSlots.map((slot) => slot.hour))).sort(
     (a, b) => a - b,
   );
   const slotMap = new Map(
-    slots.map((slot) => [`${slot.date}:${slot.hour}`, slot]),
-  );
-  const futureSlots = slots.filter(
-    (slot) => !isKstAvailabilitySlotInPast(slot.date, slot.hour, now),
+    futureSlots.map((slot) => [`${slot.date}:${slot.hour}`, slot]),
   );
   const candidates = recommendedSlots(futureSlots);
   const coordinationNeeded = coordinationNeededMembers(futureSlots);
@@ -329,86 +329,92 @@ export function AvailabilityOverview({
             value={bestSlot ? `${availabilityPercent(bestSlot)}%` : "0%"}
           />
         </div>
-        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white shadow-sm">
-          <table
-            aria-label="공대 가능 시간 밀도표"
-            className="w-max min-w-full border-collapse text-sm"
-          >
-            <thead className="bg-zinc-100 text-left text-xs font-semibold text-zinc-600">
-              <tr>
-                <th className="sticky left-0 z-10 border-b border-zinc-200 bg-zinc-100 px-3 py-2">
-                  시간
-                </th>
-                {dates.map((date) => (
-                  <th
-                    className="min-w-32 border-b border-zinc-200 px-3 py-2"
-                    key={date}
-                  >
-                    <span className="block text-zinc-800">
-                      {getKoreanWeekdayLabel(date)}
-                    </span>
-                    <span className="mt-0.5 block text-zinc-500">
-                      {date.slice(5)}
-                    </span>
+        {futureSlots.length > 0 ? (
+          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white shadow-sm">
+            <table
+              aria-label="공대 가능 시간 밀도표"
+              className="w-max min-w-full border-collapse text-sm"
+            >
+              <thead className="bg-zinc-100 text-left text-xs font-semibold text-zinc-600">
+                <tr>
+                  <th className="sticky left-0 z-10 border-b border-zinc-200 bg-zinc-100 px-3 py-2">
+                    시간
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {hours.map((hour) => (
-                <tr className="align-top odd:bg-white even:bg-zinc-50/60" key={hour}>
-                  <td className="sticky left-0 z-10 border-b border-zinc-100 bg-inherit px-3 py-2 font-medium text-zinc-700">
-                    {displayHour(hour)}
-                  </td>
-                  {dates.map((date) => {
-                    const slot = slotMap.get(`${date}:${hour}`);
-                    if (!slot) {
+                  {dates.map((date) => (
+                    <th
+                      className="min-w-32 border-b border-zinc-200 px-3 py-2"
+                      key={date}
+                    >
+                      <span className="block text-zinc-800">
+                        {getKoreanWeekdayLabel(date)}
+                      </span>
+                      <span className="mt-0.5 block text-zinc-500">
+                        {date.slice(5)}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {hours.map((hour) => (
+                  <tr className="align-top odd:bg-white even:bg-zinc-50/60" key={hour}>
+                    <td className="sticky left-0 z-10 border-b border-zinc-100 bg-inherit px-3 py-2 font-medium text-zinc-700">
+                      {displayHour(hour)}
+                    </td>
+                    {dates.map((date) => {
+                      const slot = slotMap.get(`${date}:${hour}`);
+                      if (!slot) {
+                        return (
+                          <td
+                            className="border-b border-zinc-100 px-3 py-2 text-zinc-400"
+                            key={date}
+                          >
+                            -
+                          </td>
+                        );
+                      }
+
                       return (
                         <td
-                          className="border-b border-zinc-100 px-3 py-2 text-zinc-400"
+                          aria-label={slotDetailText(slot)}
+                          className={`border-b px-3 py-2 ${availabilityCellClassName(slot)}`}
                           key={date}
+                          title={slotDetailText(slot)}
                         >
-                          -
+                          <div className="grid gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-base font-semibold text-slate-950">
+                                {availabilityPercent(slot)}%
+                              </span>
+                              <span className="text-[11px] font-semibold text-slate-500">
+                                {slot.availableMembers.length}/{totalMemberCount(slot)}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-medium">
+                              <span className="whitespace-nowrap text-emerald-800">
+                                가능 {slot.availableMembers.length}
+                              </span>
+                              <span className="whitespace-nowrap text-amber-800">
+                                조율 {slot.tentativeMembers.length}
+                              </span>
+                              <span className="whitespace-nowrap text-rose-800">
+                                불가 {unavailableNames(slot).length}
+                              </span>
+                            </div>
+                          </div>
                         </td>
                       );
-                    }
-
-                    return (
-                      <td
-                        aria-label={slotDetailText(slot)}
-                        className={`border-b px-3 py-2 ${availabilityCellClassName(slot)}`}
-                        key={date}
-                        title={slotDetailText(slot)}
-                      >
-                        <div className="grid gap-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-base font-semibold text-slate-950">
-                              {availabilityPercent(slot)}%
-                            </span>
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              {slot.availableMembers.length}/{totalMemberCount(slot)}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-medium">
-                            <span className="whitespace-nowrap text-emerald-800">
-                              가능 {slot.availableMembers.length}
-                            </span>
-                            <span className="whitespace-nowrap text-amber-800">
-                              조율 {slot.tentativeMembers.length}
-                            </span>
-                            <span className="whitespace-nowrap text-rose-800">
-                              불가 {unavailableNames(slot).length}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
+            앞으로 남은 가능 시간 현황이 없습니다.
+          </div>
+        )}
         {detailSlots.length > 0 ? (
           <details className="rounded-md border border-slate-200 bg-slate-50 p-3">
             <summary className="cursor-pointer text-sm font-semibold text-slate-800">
