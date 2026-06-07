@@ -19,6 +19,47 @@ vi.mock("@/server/raid-templates", () => ({
 }));
 
 describe("TemplatesPage", () => {
+  it("groups templates with the same boss into one collapsible section", async () => {
+    mocks.requireCurrentMember.mockResolvedValue({
+      groupId: "group-1",
+      id: "member-1",
+      role: "LEADER",
+    });
+    mocks.listRaidTemplates.mockResolvedValue([
+      {
+        difficulty: "노말",
+        gates: "1-3",
+        id: "template-normal",
+        name: "카멘",
+        slots: [],
+      },
+      {
+        difficulty: "하드",
+        gates: "1-4",
+        id: "template-hard",
+        name: "카멘",
+        slots: [],
+      },
+      {
+        difficulty: "익스트림 나이트메어",
+        gates: "최종 관문",
+        id: "template-extreme",
+        name: "카제로스 2막: 아브렐슈드",
+        slots: [],
+      },
+    ]);
+
+    render(await TemplatesPage());
+
+    expect(screen.getByLabelText("카멘 템플릿 2개")).toBeInTheDocument();
+    expect(screen.getAllByText("카멘")).toHaveLength(1);
+    expect(screen.getByLabelText("카멘 · 노말 · 1-3관문")).toBeInTheDocument();
+    expect(screen.getByLabelText("카멘 · 하드 · 1-4관문")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("카제로스 2막: 아브렐슈드 템플릿 1개"),
+    ).toBeInTheDocument();
+  });
+
   it("shows normal, hard, and extreme templates with unambiguous labels", async () => {
     mocks.requireCurrentMember.mockResolvedValue({
       groupId: "group-1",

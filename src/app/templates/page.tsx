@@ -23,6 +23,8 @@ import {
   listRaidTemplates,
 } from "@/server/raid-templates";
 
+type RaidTemplateListItem = Awaited<ReturnType<typeof listRaidTemplates>>[number];
+
 function toCount(formData: FormData, key: string) {
   return Math.max(0, Number(formData.get(key) ?? 0));
 }
@@ -59,11 +61,30 @@ function difficultyTone(label: string) {
   return "neutral" as const;
 }
 
+function groupTemplatesByName(templates: RaidTemplateListItem[]) {
+  const groups = new Map<string, RaidTemplateListItem[]>();
+
+  for (const template of templates) {
+    const group = groups.get(template.name);
+    if (group) {
+      group.push(template);
+    } else {
+      groups.set(template.name, [template]);
+    }
+  }
+
+  return Array.from(groups, ([name, groupTemplates]) => ({
+    name,
+    templates: groupTemplates,
+  }));
+}
+
 export default async function TemplatesPage() {
   const member = await requireCurrentMember();
   const templates = (await listRaidTemplates(member.groupId)).sort(
     compareRaidTemplateDisplay,
   );
+  const templateGroups = groupTemplatesByName(templates);
 
   async function createTemplate(formData: FormData) {
     "use server";
@@ -151,35 +172,63 @@ export default async function TemplatesPage() {
               <EmptyState title="아직 등록된 템플릿이 없습니다." />
             ) : (
               <div className="divide-y divide-slate-100">
-                {templates.map((template) => (
-                  <div
-                    aria-label={formatRaidTemplateLabel(template)}
-                    className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center"
-                    key={template.id}
+                {templateGroups.map((group) => (
+                  <details
+                    aria-label={`${group.name} 템플릿 ${group.templates.length}개`}
+                    className="group py-3 first:pt-0 last:pb-0"
+                    key={group.name}
+                    open
                   >
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-950">
-                          {template.name}
-                        </span>
-                        {splitRaidTemplateDifficulty(template.difficulty).map(
-                          (label) => (
-                            <Badge key={label} tone={difficultyTone(label)}>
-                              {label}
-                            </Badge>
-                          ),
-                        )}
-                        <Badge>{formatRaidTemplateGates(template.gates)}</Badge>
+                    <summary className="cursor-pointer py-1 marker:text-slate-400">
+                      <div className="inline-flex w-[calc(100%-1.5rem)] flex-wrap items-center justify-between gap-3 align-middle">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-slate-950">
+                            {group.name}
+                          </span>
+                          <Badge tone="info">{group.templates.length}개</Badge>
+                        </div>
                       </div>
-                      <div className="mt-1 text-sm text-slate-600">
-                        {template.slots.length}자리
+                    </summary>
+                    <div className="mt-2 border-l border-slate-200 pl-3 sm:pl-4">
+                      <div className="divide-y divide-slate-100">
+                        {group.templates.map((template) => (
+                          <div
+                            aria-label={formatRaidTemplateLabel(template)}
+                            className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center"
+                            key={template.id}
+                          >
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {splitRaidTemplateDifficulty(
+                                  template.difficulty,
+                                ).map((label) => (
+                                  <Badge key={label} tone={difficultyTone(label)}>
+                                    {label}
+                                  </Badge>
+                                ))}
+                                <Badge>
+                                  {formatRaidTemplateGates(template.gates)}
+                                </Badge>
+                              </div>
+                              <div className="mt-1 text-sm text-slate-600">
+                                {template.slots.length}자리
+                              </div>
+                            </div>
+                            <form action={removeTemplate}>
+                              <input
+                                name="templateId"
+                                type="hidden"
+                                value={template.id}
+                              />
+                              <button className={dangerButtonClassName}>
+                                삭제
+                              </button>
+                            </form>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <form action={removeTemplate}>
-                      <input name="templateId" type="hidden" value={template.id} />
-                      <button className={dangerButtonClassName}>삭제</button>
-                    </form>
-                  </div>
+                  </details>
                 ))}
               </div>
             )}
