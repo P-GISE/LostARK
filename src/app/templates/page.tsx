@@ -5,7 +5,6 @@ import {
   EmptyState,
   PageHeader,
   SectionPanel,
-  dangerButtonClassName,
   pageShellClassName,
   secondaryButtonClassName,
 } from "@/components/ui";
@@ -60,6 +59,9 @@ function difficultyTone(label: string) {
   }
   return "neutral" as const;
 }
+
+const compactDangerButtonClassName =
+  "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50";
 
 function groupTemplatesByName(templates: RaidTemplateListItem[]) {
   const groups = new Map<string, RaidTemplateListItem[]>();
@@ -194,10 +196,10 @@ export default async function TemplatesPage() {
                         {group.templates.map((template) => (
                           <div
                             aria-label={formatRaidTemplateLabel(template)}
-                            className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center"
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 first:pt-0 last:pb-0"
                             key={template.id}
                           >
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 {splitRaidTemplateDifficulty(
                                   template.difficulty,
@@ -220,7 +222,7 @@ export default async function TemplatesPage() {
                                 type="hidden"
                                 value={template.id}
                               />
-                              <button className={dangerButtonClassName}>
+                              <button className={compactDangerButtonClassName}>
                                 삭제
                               </button>
                             </form>

@@ -158,7 +158,7 @@ export default async function SchedulesPage({
           description={`가능 시간에서 선택한 ${selectedStartsAtLabel} 기준입니다. 템플릿을 고르면 해당 시간으로 일정이 생성됩니다.`}
           title="선택한 가능 시간으로 일정 생성"
         >
-          <form action={createSchedule} className="grid gap-3 lg:grid-cols-[1fr_14rem_1fr_auto]">
+          <form action={createSchedule} className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_14rem_minmax(0,1fr)_auto]">
             <input
               name="title"
               required
@@ -204,7 +204,7 @@ export default async function SchedulesPage({
                   />
                 ))}
               </fieldset>
-              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+              <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                 <input
                   name="title"
                   required
@@ -229,7 +229,7 @@ export default async function SchedulesPage({
             </summary>
             <form
               action={createSchedule}
-              className="mt-3 grid gap-3 lg:grid-cols-[1fr_14rem_1fr_auto]"
+              className="mt-3 grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_14rem_minmax(0,1fr)_auto]"
             >
               <input
                 name="title"
@@ -244,7 +244,7 @@ export default async function SchedulesPage({
                 placeholder="2030-06-05T21:00:00+09:00"
               />
               <TemplateSelect templates={templates} />
-              <button className={secondaryButtonClassName}>
+              <button className={`${secondaryButtonClassName} w-full sm:w-auto`}>
                 직접 입력으로 일정 생성
               </button>
             </form>

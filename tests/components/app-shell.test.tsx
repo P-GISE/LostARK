@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/app-shell";
 
 const mocks = vi.hoisted(() => ({
   getCurrentMember: vi.fn(),
   getCurrentUser: vi.fn(),
+  usePathname: vi.fn(),
 }));
 
 vi.mock("@/server/auth-context", () => ({
@@ -12,7 +13,18 @@ vi.mock("@/server/auth-context", () => ({
   getCurrentUser: mocks.getCurrentUser,
 }));
 
+vi.mock("next/navigation", () => ({
+  usePathname: mocks.usePathname,
+}));
+
 describe("AppShell", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.ADMIN_EMAILS;
+    mocks.getCurrentUser.mockResolvedValue(null);
+    mocks.usePathname.mockReturnValue("/schedules");
+  });
+
   it("shows Korean planner navigation after joining a group", async () => {
     mocks.getCurrentMember.mockResolvedValue({
       id: "member-1",
@@ -23,23 +35,45 @@ describe("AppShell", () => {
 
     render(await AppShell({ children: <main>본문</main> }));
 
-    expect(screen.getByRole("link", { name: "대시보드" })).toHaveAttribute(
+    const primaryNav = within(
+      screen.getByRole("navigation", { name: "주요 메뉴" }),
+    );
+    expect(primaryNav.getByRole("link", { name: "대시보드" })).toHaveAttribute(
       "href",
       "/",
     );
-    expect(screen.getByRole("link", { name: "가능 시간" })).toHaveAttribute(
+    expect(primaryNav.getByRole("link", { name: "가능 시간" })).toHaveAttribute(
       "href",
       "/calendar",
     );
-    expect(screen.getByRole("link", { name: "알림" })).toHaveAttribute(
+    expect(primaryNav.getByRole("link", { name: "일정" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(primaryNav.getByRole("link", { name: "공대원" })).toHaveAttribute(
+      "href",
+      "/members",
+    );
+    expect(primaryNav.queryByRole("link", { name: "템플릿" })).not.toBeInTheDocument();
+
+    const secondaryNav = within(
+      screen.getByRole("navigation", { name: "보조 메뉴" }),
+    );
+    expect(secondaryNav.getByRole("link", { name: "템플릿" })).toHaveAttribute(
+      "href",
+      "/templates",
+    );
+    expect(secondaryNav.getByRole("link", { name: "알림" })).toHaveAttribute(
       "href",
       "/notifications",
     );
-    expect(screen.getByRole("link", { name: "공대 설정" })).toHaveAttribute(
+
+    const accountMenu = within(screen.getByLabelText("계정 메뉴"));
+    expect(accountMenu.getByRole("link", { name: "공대 설정" })).toHaveAttribute(
       "href",
       "/settings",
     );
-    expect(screen.getByText("목요일 공대")).toBeInTheDocument();
+    expect(screen.getAllByText("목요일 공대").length).toBeGreaterThan(0);
   });
 
   it("hides group settings from non-leader members", async () => {
@@ -52,7 +86,11 @@ describe("AppShell", () => {
 
     render(await AppShell({ children: <main>본문</main> }));
 
-    expect(screen.queryByRole("link", { name: "공대 설정" })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("계정 메뉴")).queryByRole("link", {
+        name: "공대 설정",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides protected navigation before joining a group", async () => {
@@ -88,7 +126,11 @@ describe("AppShell", () => {
 
     render(await AppShell({ children: <main>Admin body</main> }));
 
-    expect(screen.getByRole("link", { name: "관리자" })).toHaveAttribute(
+    expect(
+      within(screen.getByLabelText("계정 메뉴")).getByRole("link", {
+        name: "관리자",
+      }),
+    ).toHaveAttribute(
       "href",
       "/admin",
     );
