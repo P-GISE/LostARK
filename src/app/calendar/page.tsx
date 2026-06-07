@@ -39,7 +39,7 @@ function statusKey(block: {
 }
 
 export default async function CalendarPage() {
-  const member = await requireCurrentMember();
+  const member = await requireCurrentMember({ loginRedirectPath: "/calendar" });
   const now = new Date();
   const days = buildLostArkWeekDays();
   const rangeStart = kstSlotDate(days[0].date, DAY_START_HOUR);

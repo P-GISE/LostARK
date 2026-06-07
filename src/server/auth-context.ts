@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { db } from "@/server/db";
 
 export const MEMBER_COOKIE_NAME =
@@ -180,9 +181,22 @@ export async function requireCurrentUser() {
   return user;
 }
 
-export async function requireCurrentMember() {
+function loginRedirectPath(nextPath: string) {
+  const safeNextPath =
+    nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.includes("://")
+      ? nextPath
+      : "/";
+  return `/auth/login?next=${encodeURIComponent(safeNextPath)}`;
+}
+
+export async function requireCurrentMember(options?: {
+  loginRedirectPath?: string;
+}) {
   const member = await getCurrentMember();
   if (!member) {
+    if (options?.loginRedirectPath) {
+      redirect(loginRedirectPath(options.loginRedirectPath));
+    }
     throw new Error("Member session is required.");
   }
   return member;

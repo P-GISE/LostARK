@@ -34,7 +34,7 @@ async function getSettingsBaseUrl() {
 }
 
 export default async function SettingsPage() {
-  const member = await requireCurrentMember();
+  const member = await requireCurrentMember({ loginRedirectPath: "/settings" });
 
   if (member.role !== "LEADER") {
     return (

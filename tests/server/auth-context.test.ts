@@ -1,11 +1,28 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  requireCurrentMember,
   signSessionValue,
   verifySessionValue,
 } from "@/server/auth-context";
 
+const mocks = vi.hoisted(() => ({
+  cookies: vi.fn(),
+  redirect: vi.fn((path: string) => {
+    throw new Error(`NEXT_REDIRECT:${path}`);
+  }),
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: mocks.cookies,
+}));
+
+vi.mock("next/navigation", () => ({
+  redirect: mocks.redirect,
+}));
+
 describe("auth context session values", () => {
   afterEach(() => {
+    vi.clearAllMocks();
     vi.unstubAllEnvs();
   });
 
@@ -44,5 +61,18 @@ describe("auth context session values", () => {
     const signed = signSessionValue("member-1");
 
     expect(verifySessionValue(signed)).toBe("member-1");
+  });
+
+  it("redirects missing member sessions to login for protected pages", async () => {
+    mocks.cookies.mockResolvedValue({
+      get: vi.fn(() => undefined),
+    });
+
+    await expect(
+      requireCurrentMember({ loginRedirectPath: "/members" }),
+    ).rejects.toThrow("NEXT_REDIRECT:/auth/login?next=%2Fmembers");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/auth/login?next=%2Fmembers",
+    );
   });
 });

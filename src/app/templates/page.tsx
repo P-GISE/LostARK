@@ -82,7 +82,7 @@ function groupTemplatesByName(templates: RaidTemplateListItem[]) {
 }
 
 export default async function TemplatesPage() {
-  const member = await requireCurrentMember();
+  const member = await requireCurrentMember({ loginRedirectPath: "/templates" });
   const templates = (await listRaidTemplates(member.groupId)).sort(
     compareRaidTemplateDisplay,
   );

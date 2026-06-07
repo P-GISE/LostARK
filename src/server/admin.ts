@@ -1,4 +1,4 @@
-import type { User } from "@prisma/client";
+import type { Prisma, User } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/server/auth-context";
 import { db } from "@/server/db";
@@ -74,7 +74,12 @@ export async function deleteAdminUser(input: {
     select: {
       email: true,
       memberships: {
-        select: { id: true },
+        select: {
+          id: true,
+          characters: {
+            select: { id: true },
+          },
+        },
       },
     },
   });
@@ -83,18 +88,28 @@ export async function deleteAdminUser(input: {
   }
 
   const memberIds = target?.memberships.map((membership) => membership.id) ?? [];
+  const characterIds =
+    target?.memberships.flatMap((membership) =>
+      membership.characters.map((character) => character.id),
+    ) ?? [];
 
   return db.$transaction(async (tx) => {
     if (memberIds.length > 0) {
+      const scheduleSlotDetachConditions: Prisma.ScheduleSlotWhereInput[] = [
+        { assignedMemberId: { in: memberIds } },
+      ];
+      if (characterIds.length > 0) {
+        scheduleSlotDetachConditions.push({
+          assignedCharacterId: { in: characterIds },
+        });
+      }
+
       await tx.schedule.deleteMany({
         where: { createdByMemberId: { in: memberIds } },
       });
       await tx.scheduleSlot.updateMany({
         where: {
-          OR: [
-            { assignedMemberId: { in: memberIds } },
-            { assignedCharacter: { memberId: { in: memberIds } } },
-          ],
+          OR: scheduleSlotDetachConditions,
         },
         data: {
           assignedMemberId: null,

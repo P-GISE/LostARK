@@ -87,6 +87,8 @@ describe("AvailabilityOverview", () => {
     expect(screen.getByText(/알파/)).toBeInTheDocument();
     expect(screen.getAllByText(/불가 1/).length).toBeGreaterThan(0);
     expect(screen.getByTitle(/불가: 베타/)).toBeInTheDocument();
+    expect(screen.getByText("조율 필요")).toBeInTheDocument();
+    expect(screen.getByText("베타")).toBeInTheDocument();
   });
 
   it("normalizes next-day hours in schedule creation links", () => {

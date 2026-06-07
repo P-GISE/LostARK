@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { TemplatePicker } from "@/components/template-picker";
 import {
   EmptyState,
   PageHeader,
@@ -8,7 +9,6 @@ import {
   pageShellClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
-  selectClassName,
 } from "@/components/ui";
 import { availabilityHours } from "@/lib/availability-hours";
 import { buildLostArkWeekDays } from "@/lib/lostark-week";
@@ -45,23 +45,6 @@ function formatStartsAt(startsAt: string) {
   }).format(date);
 }
 
-function TemplateSelect({
-  templates,
-}: {
-  templates: Awaited<ReturnType<typeof listRaidTemplates>>;
-}) {
-  return (
-    <select name="templateId" required className={selectClassName}>
-      <option value="">템플릿 선택</option>
-      {templates.map((template) => (
-        <option key={template.id} value={template.id}>
-          {formatRaidTemplateLabel(template)}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function RecommendationCard({
   checked,
   slot,
@@ -95,9 +78,9 @@ function RecommendationCard({
 export default async function SchedulesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ from?: string; startsAt?: string }>;
+  searchParams?: Promise<{ from?: string; startsAt?: string; templateId?: string }>;
 }) {
-  const member = await requireCurrentMember();
+  const member = await requireCurrentMember({ loginRedirectPath: "/schedules" });
   const params = await searchParams;
   const now = new Date();
   const defaultStartsAt = params?.startsAt ?? "";
@@ -112,6 +95,13 @@ export default async function SchedulesPage({
   const templates = (await listRaidTemplates(member.groupId)).sort(
     compareRaidTemplateDisplay,
   );
+  const selectedTemplate = templates.find(
+    (template) => template.id === params?.templateId,
+  );
+  const selectedTemplateId = selectedTemplate?.id;
+  const defaultTitle = selectedTemplate
+    ? formatRaidTemplateLabel(selectedTemplate)
+    : "";
   const days = buildLostArkWeekDays();
   const recommendations =
     member.role === "LEADER"
@@ -163,6 +153,7 @@ export default async function SchedulesPage({
               name="title"
               required
               className={inputClassName}
+              defaultValue={defaultTitle}
               placeholder="일정 제목"
             />
             <input
@@ -172,7 +163,10 @@ export default async function SchedulesPage({
               defaultValue={defaultStartsAt}
               placeholder="2030-06-05T21:00:00+09:00"
             />
-            <TemplateSelect templates={templates} />
+            <TemplatePicker
+              defaultTemplateId={selectedTemplateId}
+              templates={templates}
+            />
             <button className={primaryButtonClassName}>
               선택 시간으로 일정 생성
             </button>
@@ -209,9 +203,13 @@ export default async function SchedulesPage({
                   name="title"
                   required
                   className={inputClassName}
+                  defaultValue={defaultTitle}
                   placeholder="일정 제목"
                 />
-                <TemplateSelect templates={templates} />
+                <TemplatePicker
+                  defaultTemplateId={selectedTemplateId}
+                  templates={templates}
+                />
                 <button className={primaryButtonClassName}>
                   추천 시간으로 일정 생성
                 </button>
@@ -235,6 +233,7 @@ export default async function SchedulesPage({
                 name="title"
                 required
                 className={inputClassName}
+                defaultValue={defaultTitle}
                 placeholder="일정 제목"
               />
               <input
@@ -243,7 +242,10 @@ export default async function SchedulesPage({
                 className={inputClassName}
                 placeholder="2030-06-05T21:00:00+09:00"
               />
-              <TemplateSelect templates={templates} />
+              <TemplatePicker
+                defaultTemplateId={selectedTemplateId}
+                templates={templates}
+              />
               <button className={`${secondaryButtonClassName} w-full sm:w-auto`}>
                 직접 입력으로 일정 생성
               </button>

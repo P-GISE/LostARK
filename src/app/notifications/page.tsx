@@ -20,7 +20,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const typeLabels: Record<string, string> = {
-  MISSING_AVAILABILITY: "가능 시간 미입력",
+  MISSING_AVAILABILITY: "가능 시간 조율 전",
   REMINDER: "레이드 알림",
   SCHEDULE_CREATED: "일정 생성 알림",
 };
@@ -36,7 +36,7 @@ function countByStatus(jobs: Array<{ status: string }>) {
 }
 
 export default async function NotificationsPage() {
-  const member = await requireCurrentMember();
+  const member = await requireCurrentMember({ loginRedirectPath: "/notifications" });
   const jobs = await db.notificationJob.findMany({
     where:
       member.role === "LEADER"

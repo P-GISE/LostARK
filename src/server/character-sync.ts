@@ -78,6 +78,13 @@ export async function syncLostArkCharactersForMember(input: {
       where: { memberId: input.memberId },
       data: { isMain: false },
     });
+    await tx.member.updateMany({
+      where: { id: input.memberId },
+      data: {
+        characterSyncFailedAt: null,
+        characterSyncFailureReason: null,
+      },
+    });
 
     let importedCount = 0;
     let updatedCount = 0;
@@ -195,8 +202,17 @@ export async function syncLostArkCharactersForMembersWithMainCharacters({
       });
       syncedCount += 1;
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "알 수 없는 동기화 오류";
+      await db.member.updateMany({
+        where: { id: member.id },
+        data: {
+          characterSyncFailedAt: now,
+          characterSyncFailureReason: errorMessage,
+        },
+      });
       failures.push({
-        error: error instanceof Error ? error.message : "알 수 없는 동기화 오류",
+        error: errorMessage,
         mainCharacterName: mainCharacter.name,
         memberId: member.id,
       });

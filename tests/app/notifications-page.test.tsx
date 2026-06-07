@@ -99,13 +99,22 @@ describe("NotificationsPage", () => {
         status: "FAILED",
         type: "REMINDER",
       },
+      {
+        failureReason: null,
+        id: "job-4",
+        member: { nickname: "D" },
+        schedule: null,
+        status: "PENDING",
+        type: "MISSING_AVAILABILITY",
+      },
     ]);
 
     render(await NotificationsPage());
 
-    expect(screen.getByText("발송 대기 1")).toBeInTheDocument();
+    expect(screen.getByText("발송 대기 2")).toBeInTheDocument();
     expect(screen.getByText("발송 성공 1")).toBeInTheDocument();
     expect(screen.getByText("실패 1")).toBeInTheDocument();
+    expect(screen.getByText("가능 시간 조율 전")).toBeInTheDocument();
     expect(screen.getByText("blocked")).toBeInTheDocument();
   });
 });

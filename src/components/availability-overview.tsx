@@ -71,6 +71,29 @@ function recommendedSlots(slots: GroupAvailabilitySlot[]) {
     .slice(0, 5);
 }
 
+function coordinationNeededMembers(slots: GroupAvailabilitySlot[]) {
+  const allMembers = new Set<string>();
+  const coordinatedMembers = new Set<string>();
+
+  for (const slot of slots) {
+    for (const name of [
+      ...slot.availableMembers,
+      ...slot.tentativeMembers,
+      ...slot.unavailableMembers,
+      ...slot.missingMembers,
+    ]) {
+      allMembers.add(name);
+    }
+    for (const name of [...slot.availableMembers, ...slot.tentativeMembers]) {
+      coordinatedMembers.add(name);
+    }
+  }
+
+  return Array.from(allMembers)
+    .filter((name) => !coordinatedMembers.has(name))
+    .sort((a, b) => a.localeCompare(b, "ko"));
+}
+
 function candidateTimeText(slot: GroupAvailabilitySlot) {
   return `${getKoreanWeekdayLabel(slot.date)} ${slot.date.slice(5)} ${displayHour(
     slot.hour,
@@ -95,6 +118,7 @@ export function AvailabilityOverview({
     slots.map((slot) => [`${slot.date}:${slot.hour}`, slot]),
   );
   const candidates = recommendedSlots(slots);
+  const coordinationNeeded = coordinationNeededMembers(slots);
 
   return (
     <section className="space-y-5">
@@ -143,6 +167,30 @@ export function AvailabilityOverview({
           <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
             아직 추천할 시간이 없습니다.
           </div>
+        )}
+      </div>
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-amber-950">조율 필요</h2>
+          <span className="text-xs font-semibold text-amber-800">
+            {coordinationNeeded.length}명
+          </span>
+        </div>
+        {coordinationNeeded.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {coordinationNeeded.map((name) => (
+              <span
+                className="rounded-md border border-amber-200 bg-white px-2 py-1 text-xs font-medium text-amber-900"
+                key={name}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-amber-800">
+            모든 공대원이 한 번 이상 가능 또는 조율로 표시했습니다.
+          </p>
         )}
       </div>
       <div className="space-y-3">

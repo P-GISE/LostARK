@@ -353,4 +353,62 @@ describe("character sync", () => {
       syncedCount: 0,
     });
   });
+
+  it("stores auto-sync failure state and clears it after a later success", async () => {
+    const group = await createGroup({ name: "Auto Sync Failure State" });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "동기화실패",
+    });
+    await createCharacter({
+      memberId: member.id,
+      name: "본캐",
+      className: "바드",
+      itemLevel: 1700,
+      preferredRole: "SUPPORT",
+      notes: "",
+      serverName: "루페온",
+      isMain: true,
+      lastSyncedAt: new Date("2026-06-05T11:55:00+09:00"),
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({}) }),
+    );
+
+    const failedAt = new Date("2026-06-05T12:05:00+09:00");
+    const failure = await syncLostArkCharactersForMembersWithMainCharacters({
+      groupId: group.id,
+      now: failedAt,
+    });
+    const failedMember = await db.member.findUnique({
+      where: { id: member.id },
+      select: {
+        characterSyncFailedAt: true,
+        characterSyncFailureReason: true,
+      },
+    });
+
+    expect(failure).toMatchObject({ failedCount: 1, syncedCount: 0 });
+    expect(failedMember?.characterSyncFailedAt).toEqual(failedAt);
+    expect(failedMember?.characterSyncFailureReason).toContain("OpenAPI");
+
+    mockLostArkFetch();
+    await syncLostArkCharactersForMembersWithMainCharacters({
+      groupId: group.id,
+      now: new Date("2026-06-05T12:10:00+09:00"),
+    });
+    const recoveredMember = await db.member.findUnique({
+      where: { id: member.id },
+      select: {
+        characterSyncFailedAt: true,
+        characterSyncFailureReason: true,
+      },
+    });
+
+    expect(recoveredMember).toMatchObject({
+      characterSyncFailedAt: null,
+      characterSyncFailureReason: null,
+    });
+  });
 });

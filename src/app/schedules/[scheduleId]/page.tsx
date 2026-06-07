@@ -37,8 +37,10 @@ export default async function ScheduleDetailPage({
 }: {
   params: Promise<{ scheduleId: string }>;
 }) {
-  const member = await requireCurrentMember();
   const { scheduleId } = await params;
+  const member = await requireCurrentMember({
+    loginRedirectPath: `/schedules/${scheduleId}`,
+  });
   const [schedule, characters] = await Promise.all([
     db.schedule.findFirst({
       where: { id: scheduleId, groupId: member.groupId },

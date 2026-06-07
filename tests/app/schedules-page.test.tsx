@@ -62,10 +62,15 @@ describe("SchedulesPage", () => {
       "2030-06-04T20:00:00+09:00",
     );
     expect(
-      screen.getByRole("option", { name: "Thaemine · Hard · 1-4관문" }),
+      document.querySelector<HTMLInputElement>('input[name="templateId"]'),
+    ).toHaveValue(
+      "template-1",
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Thaemine · Hard · 1-4관문 선택됨",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toHaveAttribute("required");
-    expect(screen.getByRole("option", { name: "템플릿 선택" })).toHaveValue("");
     expect(
       screen.getByRole("button", { name: "선택 시간으로 일정 생성" }),
     ).toBeInTheDocument();
@@ -117,5 +122,46 @@ describe("SchedulesPage", () => {
       screen.getByRole("button", { name: "추천 시간으로 일정 생성" }),
     ).toBeInTheDocument();
     expect(screen.getByText("직접 시간 입력")).toBeInTheDocument();
+  });
+
+  it("preselects a template from the checklist schedule link", async () => {
+    mocks.requireCurrentMember.mockResolvedValue({
+      groupId: "group-1",
+      id: "leader-1",
+      role: "LEADER",
+    });
+    mocks.listUpcomingSchedules.mockResolvedValue([]);
+    mocks.getRecommendedScheduleSlots.mockResolvedValue([]);
+    mocks.listRaidTemplates.mockResolvedValue([
+      {
+        difficulty: "노말",
+        gates: "1-4",
+        id: "template-kamen-normal",
+        name: "카멘",
+        slots: [],
+      },
+      {
+        difficulty: "하드",
+        gates: "1-2",
+        id: "template-serka-hard",
+        name: "세르카",
+        slots: [],
+      },
+    ]);
+
+    render(
+      await SchedulesPage({
+        searchParams: Promise.resolve({
+          templateId: "template-serka-hard",
+        }),
+      }),
+    );
+
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="templateId"]'),
+    ).toHaveValue(
+      "template-serka-hard",
+    );
+    expect(screen.getAllByText("세르카 · 하드 · 1-2관문")).not.toHaveLength(0);
   });
 });
