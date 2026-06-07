@@ -77,7 +77,7 @@ export async function setCharacterRaidCheck(input: {
   const weekStartDate = resolveWeekStartDate(input);
   const { actor } = await requireManageableCharacter(input);
   const template = await db.raidTemplate.findUnique({
-    select: { groupId: true },
+    select: { groupId: true, name: true },
     where: { id: input.raidTemplateId },
   });
 
@@ -95,21 +95,24 @@ export async function setCharacterRaidCheck(input: {
     });
   }
 
-  return db.characterRaidCheck.upsert({
-    create: {
-      characterId: input.characterId,
-      raidTemplateId: input.raidTemplateId,
-      weekStartDate,
-    },
-    update: {
-      completedAt: new Date(),
-    },
-    where: {
-      characterId_raidTemplateId_weekStartDate: {
+  return db.$transaction(async (tx) => {
+    await tx.characterRaidCheck.deleteMany({
+      where: {
+        characterId: input.characterId,
+        weekStartDate,
+        raidTemplate: {
+          groupId: actor.groupId,
+          name: template.name,
+        },
+      },
+    });
+
+    return tx.characterRaidCheck.create({
+      data: {
         characterId: input.characterId,
         raidTemplateId: input.raidTemplateId,
         weekStartDate,
       },
-    },
+    });
   });
 }

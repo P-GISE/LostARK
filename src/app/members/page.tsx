@@ -77,6 +77,39 @@ function raidCheckKey(characterId: string, raidTemplateId: string) {
   return `${characterId}:${raidTemplateId}`;
 }
 
+function templateBossName(template: RaidTemplateForChecklist) {
+  return template.name.trim() || "이름 미정";
+}
+
+function groupRaidTemplatesByBossName(templates: RaidTemplateForChecklist[]) {
+  const groups = new Map<
+    string,
+    { name: string; templates: RaidTemplateForChecklist[] }
+  >();
+
+  for (const template of templates) {
+    const name = templateBossName(template);
+    const group = groups.get(name);
+    if (group) {
+      group.templates.push(template);
+    } else {
+      groups.set(name, { name, templates: [template] });
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
+function isBossGroupCompleted(input: {
+  characterId: string;
+  completedKeys: Set<string>;
+  templates: RaidTemplateForChecklist[];
+}) {
+  return input.templates.some((template) =>
+    input.completedKeys.has(raidCheckKey(input.characterId, template.id)),
+  );
+}
+
 function canEditCharacterChecklist(input: {
   currentMemberId: string;
   currentMemberRole: string;
@@ -103,11 +136,16 @@ function CharacterRaidChecklist({
   templates: RaidTemplateForChecklist[];
   weekStartDate: string;
 }) {
-  const completedCount = templates.filter((template) =>
-    completedKeys.has(raidCheckKey(characterId, template.id)),
+  const bossGroups = groupRaidTemplatesByBossName(templates);
+  const completedCount = bossGroups.filter((group) =>
+    isBossGroupCompleted({
+      characterId,
+      completedKeys,
+      templates: group.templates,
+    }),
   ).length;
   const allTemplatesCompleted =
-    templates.length > 0 && completedCount === templates.length;
+    bossGroups.length > 0 && completedCount === bossGroups.length;
 
   return (
     <div className="mt-4 border-t border-slate-200 pt-3">
@@ -116,72 +154,106 @@ function CharacterRaidChecklist({
           이번 주 보스 체크
         </div>
         <Badge tone={allTemplatesCompleted ? "success" : "neutral"}>
-          {completedCount}/{templates.length} 완료
+          {completedCount}/{bossGroups.length} 완료
         </Badge>
       </div>
-      {templates.length === 0 ? (
+      {bossGroups.length === 0 ? (
         <div className="mt-3 text-xs text-slate-500">
           등록된 레이드 템플릿이 없습니다.
         </div>
       ) : (
-        <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto pr-1">
-          {templates.map((template) => {
-            const label = formatRaidTemplateLabel(template);
-            const completed = completedKeys.has(
-              raidCheckKey(characterId, template.id),
-            );
-            const actionLabel = completed ? "완료 해제" : "완료 처리";
-            const buttonClassName = cx(
-              "flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-xs font-medium transition",
-              completed
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900",
-            );
-
-            if (!canEdit) {
-              return (
-                <div
-                  aria-label={`${label} ${completed ? "완료" : "미완료"}`}
-                  className={buttonClassName}
-                  key={template.id}
-                >
-                  <span className="min-w-0 truncate">{label}</span>
-                  <span className="shrink-0 text-[11px] font-semibold">
-                    {completed ? "완료" : "미완료"}
-                  </span>
-                </div>
-              );
-            }
+        <div className="mt-3 grid max-h-64 gap-3 overflow-y-auto pr-1">
+          {bossGroups.map((group) => {
+            const groupCompleted = isBossGroupCompleted({
+              characterId,
+              completedKeys,
+              templates: group.templates,
+            });
 
             return (
-              <form action={action} key={template.id}>
-                <input name="characterId" type="hidden" value={characterId} />
-                <input
-                  name="raidTemplateId"
-                  type="hidden"
-                  value={template.id}
-                />
-                <input
-                  name="weekStartDate"
-                  type="hidden"
-                  value={weekStartDate}
-                />
-                <input
-                  name="completed"
-                  type="hidden"
-                  value={String(!completed)}
-                />
-                <button
-                  aria-label={`${label} ${actionLabel}`}
-                  className={buttonClassName}
-                  type="submit"
-                >
-                  <span className="min-w-0 truncate">{label}</span>
-                  <span className="shrink-0 text-[11px] font-semibold">
-                    {completed ? "완료" : "미완료"}
+              <div
+                className="grid gap-2 border-b border-slate-200 pb-3 last:border-b-0 last:pb-0"
+                key={group.name}
+              >
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <div className="min-w-0 truncate text-xs font-semibold text-slate-800">
+                    {group.name}
+                  </div>
+                  <span
+                    className={cx(
+                      "shrink-0 text-[11px] font-semibold",
+                      groupCompleted ? "text-emerald-700" : "text-slate-500",
+                    )}
+                  >
+                    {groupCompleted ? "완료" : "미완료"}
                   </span>
-                </button>
-              </form>
+                </div>
+                <div className="grid gap-1.5">
+                  {group.templates.map((template) => {
+                    const label = formatRaidTemplateLabel(template);
+                    const completed = completedKeys.has(
+                      raidCheckKey(characterId, template.id),
+                    );
+                    const actionLabel = completed ? "완료 해제" : "완료 처리";
+                    const buttonClassName = cx(
+                      "flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-xs font-medium transition",
+                      completed
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900",
+                    );
+
+                    if (!canEdit) {
+                      return (
+                        <div
+                          aria-label={`${label} ${completed ? "완료" : "미완료"}`}
+                          className={buttonClassName}
+                          key={template.id}
+                        >
+                          <span className="min-w-0 truncate">{label}</span>
+                          <span className="shrink-0 text-[11px] font-semibold">
+                            {completed ? "완료" : "미완료"}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <form action={action} key={template.id}>
+                        <input
+                          name="characterId"
+                          type="hidden"
+                          value={characterId}
+                        />
+                        <input
+                          name="raidTemplateId"
+                          type="hidden"
+                          value={template.id}
+                        />
+                        <input
+                          name="weekStartDate"
+                          type="hidden"
+                          value={weekStartDate}
+                        />
+                        <input
+                          name="completed"
+                          type="hidden"
+                          value={String(!completed)}
+                        />
+                        <button
+                          aria-label={`${label} ${actionLabel}`}
+                          className={buttonClassName}
+                          type="submit"
+                        >
+                          <span className="min-w-0 truncate">{label}</span>
+                          <span className="shrink-0 text-[11px] font-semibold">
+                            {completed ? "완료" : "미완료"}
+                          </span>
+                        </button>
+                      </form>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>

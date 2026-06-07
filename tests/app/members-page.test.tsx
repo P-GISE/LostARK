@@ -61,9 +61,23 @@ describe("MembersPage", () => {
     ]);
     mocks.listRaidTemplates.mockResolvedValue([
       {
+        difficulty: "노말",
+        gates: "1-4",
+        id: "template-3",
+        name: "카멘",
+        slots: [],
+      },
+      {
         difficulty: "하드",
         gates: "1-4",
         id: "template-1",
+        name: "카멘",
+        slots: [],
+      },
+      {
+        difficulty: "익스트림 하드",
+        gates: "1-4",
+        id: "template-4",
         name: "카멘",
         slots: [],
       },
@@ -98,8 +112,17 @@ describe("MembersPage", () => {
     expect(screen.queryByRole("button", { name: "삭제" })).not.toBeInTheDocument();
     expect(screen.getByText("이번 주 보스 체크")).toBeInTheDocument();
     expect(screen.getByText("1/2 완료")).toBeInTheDocument();
+    expect(screen.queryByText("1/4 완료")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "카멘 · 노말 · 1-4관문 완료 처리" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "카멘 · 하드 · 1-4관문 완료 해제" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "카멘 · 익스트림 하드 · 1-4관문 완료 처리",
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "상아탑 · 노말 · 1-3관문 완료 처리" }),
