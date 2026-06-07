@@ -10,6 +10,17 @@ const difficultyOrder = new Map([
   ["나이트메어", 2],
 ]);
 
+const bossPriorityRules = [
+  "지평의 성당",
+  "세르카",
+  "종막",
+  "4막",
+  "3막",
+  "2막",
+  "1막",
+  "서막",
+];
+
 export function formatRaidTemplateGates(gates: string) {
   const trimmed = gates.trim();
   if (!trimmed) {
@@ -51,10 +62,22 @@ function getDifficultyRank(difficulty: string) {
   return (isExtreme ? 10 : 0) + (difficultyOrder.get(baseDifficulty) ?? 99);
 }
 
+function getBossPriorityRank(name: string) {
+  const trimmed = name.trim();
+  const index = bossPriorityRules.findIndex((rule) => trimmed.includes(rule));
+  return index === -1 ? bossPriorityRules.length : index;
+}
+
 export function compareRaidTemplateDisplay(
   a: RaidTemplateDisplayInput,
   b: RaidTemplateDisplayInput,
 ) {
+  const bossPriorityComparison =
+    getBossPriorityRank(a.name) - getBossPriorityRank(b.name);
+  if (bossPriorityComparison !== 0) {
+    return bossPriorityComparison;
+  }
+
   const nameComparison = a.name.localeCompare(b.name, "ko");
   if (nameComparison !== 0) {
     return nameComparison;

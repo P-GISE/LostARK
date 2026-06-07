@@ -52,4 +52,52 @@ describe("raid template display", () => {
       "익스트림 나이트메어",
     ]);
   });
+
+  it("sorts priority raids before fallback bosses in operation order", () => {
+    const templates = [
+      { difficulty: "노말", gates: "1-4", name: "카멘" },
+      {
+        difficulty: "노말",
+        gates: "1-2",
+        name: "카제로스 서막: 붉어진 백야의 나선",
+      },
+      {
+        difficulty: "노말",
+        gates: "1-2",
+        name: "카제로스 1막: 대지를 부수는 업화의 궤적",
+      },
+      {
+        difficulty: "노말",
+        gates: "1-2",
+        name: "카제로스 2막: 부유하는 악몽의 진혼곡",
+      },
+      {
+        difficulty: "노말",
+        gates: "1-3",
+        name: "카제로스 3막: 칠흑, 폭풍의 밤",
+      },
+      { difficulty: "노말", gates: "1-3", name: "카제로스 4막: 파멸의 성채" },
+      { difficulty: "노말", gates: "1-2", name: "카제로스 종막: 최후의 날" },
+      {
+        difficulty: "노말",
+        gates: "1-2",
+        name: "그림자 레이드: 고통의 마녀 세르카",
+      },
+      { difficulty: "1단계", gates: "1", name: "지평의 성당" },
+    ];
+
+    expect(
+      templates.sort(compareRaidTemplateDisplay).map((item) => item.name),
+    ).toEqual([
+      "지평의 성당",
+      "그림자 레이드: 고통의 마녀 세르카",
+      "카제로스 종막: 최후의 날",
+      "카제로스 4막: 파멸의 성채",
+      "카제로스 3막: 칠흑, 폭풍의 밤",
+      "카제로스 2막: 부유하는 악몽의 진혼곡",
+      "카제로스 1막: 대지를 부수는 업화의 궤적",
+      "카제로스 서막: 붉어진 백야의 나선",
+      "카멘",
+    ]);
+  });
 });
