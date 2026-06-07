@@ -31,15 +31,34 @@ function slotDetailText(slot: GroupAvailabilitySlot) {
   ].join(" / ");
 }
 
-function secondaryCounts(slot: GroupAvailabilitySlot) {
-  return [
-    slot.tentativeMembers.length > 0
-      ? `조율 ${slot.tentativeMembers.length}`
-      : null,
-    unavailableNames(slot).length > 0
-      ? `불가 ${unavailableNames(slot).length}`
-      : null,
-  ].filter((count): count is string => Boolean(count));
+function totalMemberCount(slot: GroupAvailabilitySlot) {
+  return (
+    slot.availableMembers.length +
+    slot.tentativeMembers.length +
+    unavailableNames(slot).length
+  );
+}
+
+function availabilityPercent(slot: GroupAvailabilitySlot) {
+  const total = totalMemberCount(slot);
+  if (total === 0) {
+    return 0;
+  }
+  return Math.round((slot.availableMembers.length / total) * 100);
+}
+
+function availabilityCellClassName(slot: GroupAvailabilitySlot) {
+  const percent = availabilityPercent(slot);
+  if (percent >= 75) {
+    return "border-emerald-200 bg-emerald-50";
+  }
+  if (percent >= 50) {
+    return "border-cyan-200 bg-cyan-50";
+  }
+  if (slot.availableMembers.length > 0 || slot.tentativeMembers.length > 0) {
+    return "border-amber-200 bg-amber-50";
+  }
+  return "border-slate-200 bg-slate-50";
 }
 
 function recommendedSlots(slots: GroupAvailabilitySlot[]) {
@@ -69,6 +88,29 @@ function recommendedSlots(slots: GroupAvailabilitySlot[]) {
       return a.date === b.date ? a.hour - b.hour : a.date.localeCompare(b.date);
     })
     .slice(0, 5);
+}
+
+function bestAvailabilitySlot(slots: GroupAvailabilitySlot[]) {
+  return [...slots].toSorted((a, b) => {
+    const availableDiff =
+      b.availableMembers.length - a.availableMembers.length;
+    if (availableDiff !== 0) {
+      return availableDiff;
+    }
+
+    const percentDiff = availabilityPercent(b) - availabilityPercent(a);
+    if (percentDiff !== 0) {
+      return percentDiff;
+    }
+
+    const tentativeDiff =
+      b.tentativeMembers.length - a.tentativeMembers.length;
+    if (tentativeDiff !== 0) {
+      return tentativeDiff;
+    }
+
+    return a.date === b.date ? a.hour - b.hour : a.date.localeCompare(b.date);
+  })[0];
 }
 
 function coordinationNeededMembers(slots: GroupAvailabilitySlot[]) {
@@ -105,6 +147,50 @@ function scheduleLink(slot: GroupAvailabilitySlot) {
   return `/schedules?startsAt=${encodeURIComponent(startsAt)}&from=availability`;
 }
 
+function SummaryMetric({
+  detail,
+  label,
+  value,
+}: {
+  detail: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="text-xs font-semibold text-slate-500">{label}</div>
+      <div className="mt-1 text-xl font-semibold text-slate-950">{value}</div>
+      <div className="mt-1 truncate text-xs text-slate-500">{detail}</div>
+    </div>
+  );
+}
+
+function SlotRoster({ slot }: { slot: GroupAvailabilitySlot }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-slate-950">
+          {candidateTimeText(slot)}
+        </div>
+        <div className="text-xs font-semibold text-slate-500">
+          가능 {slot.availableMembers.length}/{totalMemberCount(slot)}
+        </div>
+      </div>
+      <div className="mt-2 grid gap-1.5 text-xs leading-5">
+        <div className="truncate text-emerald-800">
+          {detailText("가능", slot.availableMembers)}
+        </div>
+        <div className="truncate text-amber-800">
+          {detailText("조율", slot.tentativeMembers)}
+        </div>
+        <div className="truncate text-rose-800">
+          {detailText("불가", unavailableNames(slot))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AvailabilityOverview({
   slots,
 }: {
@@ -119,6 +205,17 @@ export function AvailabilityOverview({
   );
   const candidates = recommendedSlots(slots);
   const coordinationNeeded = coordinationNeededMembers(slots);
+  const bestSlot = bestAvailabilitySlot(slots);
+  const detailSlots =
+    candidates.length > 0
+      ? candidates
+      : slots
+          .filter(
+            (slot) =>
+              slot.availableMembers.length > 0 ||
+              slot.tentativeMembers.length > 0,
+          )
+          .slice(0, 5);
 
   return (
     <section className="space-y-5">
@@ -194,102 +291,130 @@ export function AvailabilityOverview({
         )}
       </div>
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-zinc-950">
-          공대 가능 시간 현황
-        </h2>
-      <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white shadow-sm">
-        <table className="w-max min-w-full border-collapse text-sm">
-          <thead className="bg-zinc-100 text-left text-xs font-semibold text-zinc-600">
-            <tr>
-              <th className="sticky left-0 z-10 border-b border-zinc-200 bg-zinc-100 px-3 py-2">
-                시간
-              </th>
-              {dates.map((date) => (
-                <th
-                  className="min-w-36 border-b border-zinc-200 px-3 py-2"
-                  key={date}
-                >
-                  <span className="block text-zinc-800">
-                    {getKoreanWeekdayLabel(date)}
-                  </span>
-                  <span className="mt-0.5 block text-zinc-500">
-                    {date.slice(5)}
-                  </span>
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-950">
+            공대 가능 시간 현황
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            숫자와 색상으로 먼저 비교하고, 명단은 상세 영역에서 확인합니다.
+          </p>
+        </div>
+        <div
+          aria-label="공대 가능 시간 요약"
+          className="grid gap-3 md:grid-cols-3"
+        >
+          <SummaryMetric
+            detail={bestSlot ? candidateTimeText(bestSlot) : "-"}
+            label="최대 가능"
+            value={
+              bestSlot
+                ? `${bestSlot.availableMembers.length}/${totalMemberCount(bestSlot)}명`
+                : "0명"
+            }
+          />
+          <SummaryMetric
+            detail="가능 또는 조율 표시가 없는 공대원"
+            label="조율 필요"
+            value={`${coordinationNeeded.length}명`}
+          />
+          <SummaryMetric
+            detail="가장 좋은 시간의 가능 비율"
+            label="응답 현황"
+            value={bestSlot ? `${availabilityPercent(bestSlot)}%` : "0%"}
+          />
+        </div>
+        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white shadow-sm">
+          <table
+            aria-label="공대 가능 시간 밀도표"
+            className="w-max min-w-full border-collapse text-sm"
+          >
+            <thead className="bg-zinc-100 text-left text-xs font-semibold text-zinc-600">
+              <tr>
+                <th className="sticky left-0 z-10 border-b border-zinc-200 bg-zinc-100 px-3 py-2">
+                  시간
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {hours.map((hour) => (
-              <tr className="align-top odd:bg-white even:bg-zinc-50/60" key={hour}>
-                <td className="sticky left-0 z-10 border-b border-zinc-100 bg-inherit px-3 py-2 font-medium text-zinc-700">
-                  {displayHour(hour)}
-                </td>
-                {dates.map((date) => {
-                  const slot = slotMap.get(`${date}:${hour}`);
-                  if (!slot) {
+                {dates.map((date) => (
+                  <th
+                    className="min-w-32 border-b border-zinc-200 px-3 py-2"
+                    key={date}
+                  >
+                    <span className="block text-zinc-800">
+                      {getKoreanWeekdayLabel(date)}
+                    </span>
+                    <span className="mt-0.5 block text-zinc-500">
+                      {date.slice(5)}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {hours.map((hour) => (
+                <tr className="align-top odd:bg-white even:bg-zinc-50/60" key={hour}>
+                  <td className="sticky left-0 z-10 border-b border-zinc-100 bg-inherit px-3 py-2 font-medium text-zinc-700">
+                    {displayHour(hour)}
+                  </td>
+                  {dates.map((date) => {
+                    const slot = slotMap.get(`${date}:${hour}`);
+                    if (!slot) {
+                      return (
+                        <td
+                          className="border-b border-zinc-100 px-3 py-2 text-zinc-400"
+                          key={date}
+                        >
+                          -
+                        </td>
+                      );
+                    }
+
                     return (
                       <td
-                        className="border-b border-zinc-100 px-3 py-2 text-zinc-400"
+                        aria-label={slotDetailText(slot)}
+                        className={`border-b px-3 py-2 ${availabilityCellClassName(slot)}`}
                         key={date}
+                        title={slotDetailText(slot)}
                       >
-                        -
+                        <div className="grid gap-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-base font-semibold text-slate-950">
+                              {availabilityPercent(slot)}%
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              {slot.availableMembers.length}/{totalMemberCount(slot)}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-medium">
+                            <span className="whitespace-nowrap text-emerald-800">
+                              가능 {slot.availableMembers.length}
+                            </span>
+                            <span className="whitespace-nowrap text-amber-800">
+                              조율 {slot.tentativeMembers.length}
+                            </span>
+                            <span className="whitespace-nowrap text-rose-800">
+                              불가 {unavailableNames(slot).length}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                     );
-                  }
-
-                  const counts = secondaryCounts(slot);
-
-                  return (
-                    <td
-                      aria-label={slotDetailText(slot)}
-                      className="border-b border-zinc-100 px-3 py-2"
-                      key={date}
-                      title={slotDetailText(slot)}
-                    >
-                      <div className="grid gap-1">
-                        <div
-                          className={
-                            slot.availableMembers.length > 0
-                              ? "font-medium text-emerald-800"
-                              : "font-medium text-zinc-500"
-                          }
-                        >
-                          {`가능 ${slot.availableMembers.length}`}
-                        </div>
-                        {counts.length > 0 ? (
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-zinc-600">
-                            {counts.map((count) => (
-                              <span className="whitespace-nowrap" key={count}>
-                                {count}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {slot.availableMembers.length > 0 ? (
-                          <div className="truncate text-xs text-emerald-700">
-                            {namesText(slot.availableMembers)}
-                          </div>
-                        ) : null}
-                        {slot.tentativeMembers.length > 0 ? (
-                          <div className="truncate text-xs text-amber-800">
-                            {detailText("조율", slot.tentativeMembers)}
-                          </div>
-                        ) : null}
-                        {unavailableNames(slot).length > 0 ? (
-                          <div className="truncate text-xs text-rose-800">
-                            {detailText("불가", unavailableNames(slot))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {detailSlots.length > 0 ? (
+          <details className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+              상세 명단 보기
+            </summary>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {detailSlots.map((slot) => (
+                <SlotRoster key={`${slot.date}:${slot.hour}`} slot={slot} />
+              ))}
+            </div>
+          </details>
+        ) : null}
       </div>
     </section>
   );
