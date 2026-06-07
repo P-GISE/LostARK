@@ -1,7 +1,9 @@
 import { sendDiscordDm } from "@/server/discord";
 import {
+  markNotificationCanceled,
   markNotificationFailed,
   markNotificationSent,
+  shouldSendNotificationJob,
   takeDueNotificationJobs,
 } from "@/server/notifications";
 
@@ -12,6 +14,14 @@ export async function processNotificationJobsOnce() {
     try {
       if (!job.member.discordUserId) {
         throw new Error("디스코드가 연결되어 있지 않습니다");
+      }
+
+      if (job.type === "REMINDER" && !(await shouldSendNotificationJob(job))) {
+        await markNotificationCanceled(
+          job.id,
+          "참가 대상이 아닌 리마인더입니다.",
+        );
+        continue;
       }
 
       await sendDiscordDm(job.member.discordUserId, job.message);

@@ -1,13 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createCharacter } from "@/server/characters";
 import { db } from "@/server/db";
-import { createGroup } from "@/server/groups";
+import { createGroup, createGroupWithLeader } from "@/server/groups";
 import { connectDiscordMember, joinGroupByInvite } from "@/server/members";
 import {
   createNotificationJob,
   markNotificationFailed,
   sendTestNotificationDm,
+  shouldSendNotificationJob,
   takeDueNotificationJobs,
 } from "@/server/notifications";
+import { createRaidTemplate } from "@/server/raid-templates";
+import {
+  assignScheduleSlot,
+  createScheduleFromTemplate,
+  setScheduleAttendance,
+} from "@/server/schedules";
 
 const mocks = vi.hoisted(() => ({
   sendDiscordDm: vi.fn(),
@@ -136,5 +144,96 @@ describe("notifications", () => {
     });
 
     expect(mocks.sendDiscordDm).not.toHaveBeenCalled();
+  });
+
+  it("sends reminder jobs only to members participating in the schedule", async () => {
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "Reminder Static",
+      leaderNickname: "ReminderLead",
+    });
+    const acceptedMember = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "AcceptedMember",
+    });
+    const assignedMember = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "AssignedMember",
+    });
+    const idleMember = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "IdleMember",
+    });
+    for (const [member, discordUserId] of [
+      [leader, "discord-leader"],
+      [acceptedMember, "discord-accepted"],
+      [assignedMember, "discord-assigned"],
+      [idleMember, "discord-idle"],
+    ] as const) {
+      await connectDiscordMember({ memberId: member.id, discordUserId });
+    }
+    const assignedCharacter = await createCharacter({
+      memberId: assignedMember.id,
+      name: "AssignedChar",
+      className: "Bard",
+      itemLevel: 1680,
+      preferredRole: "SUPPORT",
+      notes: "",
+    });
+    const template = await createRaidTemplate({
+      groupId: group.id,
+      name: "지평의 성당",
+      difficulty: "3단계",
+      gates: "1-2",
+      requiredPlayers: 1,
+      requirements: "",
+      notes: "",
+      slots: [
+        {
+          label: "Support 1",
+          role: "SUPPORT",
+          required: true,
+          classPreference: "",
+          notes: "",
+        },
+      ],
+    });
+    const schedule = await createScheduleFromTemplate({
+      groupId: group.id,
+      templateId: template.id,
+      title: "지평의 성당 3단계",
+      startsAt: "2030-06-05T21:00:00+09:00",
+      createdByMemberId: leader.id,
+    });
+    await setScheduleAttendance({
+      memberId: acceptedMember.id,
+      memo: "",
+      scheduleId: schedule.id,
+      status: "ACCEPTED",
+    });
+    await assignScheduleSlot({
+      slotId: schedule.slots[0].id,
+      memberId: assignedMember.id,
+      characterId: assignedCharacter.id,
+    });
+    const reminderJobs = await db.notificationJob.findMany({
+      where: { scheduleId: schedule.id, type: "REMINDER" },
+    });
+    const reminderFor = (memberId: string) => {
+      const job = reminderJobs.find((entry) => entry.memberId === memberId);
+      if (!job) {
+        throw new Error(`Missing reminder job for ${memberId}`);
+      }
+      return job;
+    };
+
+    await expect(
+      shouldSendNotificationJob(reminderFor(acceptedMember.id)),
+    ).resolves.toBe(true);
+    await expect(
+      shouldSendNotificationJob(reminderFor(assignedMember.id)),
+    ).resolves.toBe(true);
+    await expect(
+      shouldSendNotificationJob(reminderFor(idleMember.id)),
+    ).resolves.toBe(false);
   });
 });

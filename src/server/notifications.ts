@@ -29,17 +29,73 @@ function formatScheduleTime(startsAt: Date) {
   }).format(startsAt);
 }
 
+function formatRaidSummary(input: {
+  difficulty?: string;
+  gates?: string;
+  templateName?: string;
+  title: string;
+}) {
+  const raidName = [input.templateName, input.difficulty]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+  const gateText = input.gates?.trim() ? `${input.gates.trim()}관문` : "";
+  const summary = [raidName, gateText].filter(Boolean).join(" · ");
+
+  return summary || input.title.trim();
+}
+
+function buildScheduleCreatedMessage(input: {
+  difficulty?: string;
+  gates?: string;
+  scheduleTime: string;
+  templateName?: string;
+  title: string;
+}) {
+  return [
+    "[로스트아크 공대관리] 새 일정이 생성되었습니다.",
+    formatRaidSummary(input),
+    `시간: ${input.scheduleTime}`,
+    `일정명: ${input.title}`,
+  ].join("\n");
+}
+
+function buildScheduleReminderMessage(input: {
+  difficulty?: string;
+  gates?: string;
+  scheduleTime: string;
+  templateName?: string;
+  title: string;
+}) {
+  return [
+    "[로스트아크 공대관리] 1시간 후 일정이 시작됩니다.",
+    formatRaidSummary(input),
+    `시간: ${input.scheduleTime}`,
+    `일정명: ${input.title}`,
+  ].join("\n");
+}
+
 export async function queueScheduleNotificationJobs(input: {
+  difficulty?: string;
+  gates?: string;
   groupId: string;
   scheduleId: string;
+  templateName?: string;
   title: string;
   startsAt: Date;
   now?: Date;
 }) {
   const now = input.now ?? new Date();
-  const reminderAt = new Date(input.startsAt.getTime() - 30 * 60 * 1000);
+  const reminderAt = new Date(input.startsAt.getTime() - 60 * 60 * 1000);
   const sendReminderAt = reminderAt > now ? reminderAt : now;
   const scheduleTime = formatScheduleTime(input.startsAt);
+  const scheduleMessage = {
+    difficulty: input.difficulty,
+    gates: input.gates,
+    scheduleTime,
+    templateName: input.templateName,
+    title: input.title,
+  };
   const members = await db.member.findMany({
     where: {
       groupId: input.groupId,
@@ -59,7 +115,7 @@ export async function queueScheduleNotificationJobs(input: {
         memberId: member.id,
         scheduleId: input.scheduleId,
         type: "SCHEDULE_CREATED",
-        message: `[로스트아크 공대관리] 새 일정이 생성되었습니다.\n${input.title}\n${scheduleTime}`,
+        message: buildScheduleCreatedMessage(scheduleMessage),
         sendAfter: now,
       },
       {
@@ -67,11 +123,47 @@ export async function queueScheduleNotificationJobs(input: {
         memberId: member.id,
         scheduleId: input.scheduleId,
         type: "REMINDER",
-        message: `[로스트아크 공대관리] 30분 뒤 레이드가 시작됩니다.\n${input.title}\n${scheduleTime}`,
+        message: buildScheduleReminderMessage(scheduleMessage),
         sendAfter: sendReminderAt,
       },
     ]),
   });
+}
+
+export async function shouldSendNotificationJob(job: {
+  memberId: string;
+  scheduleId: string | null;
+  type: string;
+}) {
+  if (job.type !== "REMINDER" || !job.scheduleId) {
+    return true;
+  }
+
+  const schedule = await db.schedule.findUnique({
+    where: { id: job.scheduleId },
+    select: {
+      status: true,
+      attendances: {
+        where: {
+          memberId: job.memberId,
+          status: "ACCEPTED",
+        },
+        select: { id: true },
+        take: 1,
+      },
+      slots: {
+        where: { assignedMemberId: job.memberId },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+
+  if (!schedule || schedule.status === "CANCELED") {
+    return false;
+  }
+
+  return schedule.attendances.length > 0 || schedule.slots.length > 0;
 }
 
 export async function sendTestNotificationDm(memberId: string) {
@@ -114,6 +206,16 @@ export async function markNotificationSent(jobId: string) {
     data: {
       status: "SENT",
       failureReason: null,
+    },
+  });
+}
+
+export async function markNotificationCanceled(jobId: string, reason = "") {
+  return db.notificationJob.update({
+    where: { id: jobId },
+    data: {
+      status: "CANCELED",
+      failureReason: reason.trim() || null,
     },
   });
 }

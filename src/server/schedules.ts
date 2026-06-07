@@ -85,8 +85,11 @@ export async function createScheduleFromTemplate(input: {
   });
 
   await queueScheduleNotificationJobs({
+    difficulty: schedule.template.difficulty,
+    gates: schedule.template.gates,
     groupId: schedule.groupId,
     scheduleId: schedule.id,
+    templateName: schedule.template.name,
     title: schedule.title,
     startsAt: schedule.startsAt,
   });

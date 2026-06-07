@@ -150,6 +150,23 @@ describe("schedules", () => {
       "SCHEDULE_CREATED",
       "SCHEDULE_CREATED",
     ]);
+    expect(
+      jobs.find((job) => job.type === "SCHEDULE_CREATED")?.message,
+    ).toContain("[로스트아크 공대관리] 새 일정이 생성되었습니다.");
+    expect(
+      jobs.find((job) => job.type === "SCHEDULE_CREATED")?.message,
+    ).toContain("Aegir Hard · 1-2관문");
+    expect(
+      jobs.find((job) => job.type === "SCHEDULE_CREATED")?.message,
+    ).toContain("시간: 2030. 6. 5. 오후 9:00");
+    expect(jobs.filter((job) => job.type === "REMINDER")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("1시간 후 일정이 시작됩니다."),
+          sendAfter: new Date("2030-06-05T20:00:00+09:00"),
+        }),
+      ]),
+    );
   });
 
   it("rejects schedule creation by non-leaders", async () => {
