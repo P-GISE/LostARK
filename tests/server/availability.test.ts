@@ -20,9 +20,9 @@ describe("availability", () => {
 
     const block = await saveAvailabilityBlock({
       memberId: member.id,
-      date: "2026-06-04",
-      startsAt: "2026-06-04T20:00:00+09:00",
-      endsAt: "2026-06-04T22:00:00+09:00",
+      date: "2030-06-04",
+      startsAt: "2030-06-04T20:00:00+09:00",
+      endsAt: "2030-06-04T22:00:00+09:00",
       status: "AVAILABLE",
       memo: "After dinner",
     });
@@ -40,9 +40,9 @@ describe("availability", () => {
     await expect(
       saveAvailabilityBlock({
         memberId: member.id,
-        date: "2026-06-04",
-        startsAt: "2026-06-04T22:00:00+09:00",
-        endsAt: "2026-06-04T20:00:00+09:00",
+        date: "2030-06-04",
+        startsAt: "2030-06-04T22:00:00+09:00",
+        endsAt: "2030-06-04T20:00:00+09:00",
         status: "AVAILABLE",
         memo: "",
       }),
@@ -58,19 +58,37 @@ describe("availability", () => {
 
     const first = await setAvailabilitySlot({
       memberId: member.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
       status: "AVAILABLE",
     });
     const updated = await setAvailabilitySlot({
       memberId: member.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
       status: "UNAVAILABLE",
     });
 
     expect(updated.id).toBe(first.id);
     expect(updated.status).toBe("UNAVAILABLE");
+  });
+
+  it("rejects availability slots that already started", async () => {
+    const group = await createGroup({ name: "Past Slot" });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "PastUser",
+    });
+
+    await expect(
+      setAvailabilitySlot({
+        memberId: member.id,
+        date: "2026-06-07",
+        hour: 16,
+        status: "AVAILABLE",
+        now: new Date("2026-06-07T07:30:00.000Z"),
+      } as Parameters<typeof setAvailabilitySlot>[0] & { now: Date }),
+    ).rejects.toThrow("지난 시간에는 가능 시간을 입력할 수 없습니다");
   });
 
   it("clears an existing hourly slot back to missing", async () => {
@@ -82,13 +100,13 @@ describe("availability", () => {
 
     const slot = await setAvailabilitySlot({
       memberId: member.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
       status: "AVAILABLE",
     });
     const result = await clearAvailabilitySlot({
       memberId: member.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
     });
 
@@ -111,13 +129,13 @@ describe("availability", () => {
 
     const block = await setAvailabilitySlot({
       memberId: member.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 25,
       status: "TENTATIVE",
     });
 
-    expect(block.startsAt.toISOString()).toBe("2026-06-04T16:00:00.000Z");
-    expect(block.endsAt.toISOString()).toBe("2026-06-04T17:00:00.000Z");
+    expect(block.startsAt.toISOString()).toBe("2030-06-04T16:00:00.000Z");
+    expect(block.endsAt.toISOString()).toBe("2030-06-04T17:00:00.000Z");
   });
 
   it("summarizes group availability by slot for leaders", async () => {
@@ -136,26 +154,26 @@ describe("availability", () => {
 
     await setAvailabilitySlot({
       memberId: leader.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
       status: "AVAILABLE",
     });
     await setAvailabilitySlot({
       memberId: memberA.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
       status: "TENTATIVE",
     });
 
     const overview = await getGroupAvailabilityOverview({
       groupId: group.id,
-      dates: ["2026-06-04"],
+      dates: ["2030-06-04"],
       hours: [20],
     });
 
     expect(overview).toEqual([
       {
-        date: "2026-06-04",
+        date: "2030-06-04",
         hour: 20,
         availableMembers: ["리더"],
         tentativeMembers: ["알파"],
@@ -186,28 +204,28 @@ describe("availability", () => {
     for (const member of [leader, memberA, memberB]) {
       await setAvailabilitySlot({
         memberId: member.id,
-        date: "2026-06-04",
+        date: "2030-06-04",
         hour: 20,
         status: "AVAILABLE",
       });
     }
     await setAvailabilitySlot({
       memberId: memberC.id,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
       status: "UNAVAILABLE",
     });
     for (const member of [leader, memberA]) {
       await setAvailabilitySlot({
         memberId: member.id,
-        date: "2026-06-04",
+        date: "2030-06-04",
         hour: 21,
         status: "AVAILABLE",
       });
     }
 
     const recommendations = await getRecommendedScheduleSlots({
-      dates: ["2026-06-04"],
+      dates: ["2030-06-04"],
       groupId: group.id,
       hours: [20, 21],
     });
@@ -215,10 +233,47 @@ describe("availability", () => {
     expect(recommendations).toHaveLength(1);
     expect(recommendations[0]).toMatchObject({
       availableCount: 3,
-      date: "2026-06-04",
+      date: "2030-06-04",
       hour: 20,
-      startsAt: "2026-06-04T20:00:00+09:00",
+      startsAt: "2030-06-04T20:00:00+09:00",
       totalMembers: 4,
     });
+  });
+
+  it("does not recommend availability slots that already started", async () => {
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "Future Recommendation Group",
+      leaderNickname: "Leader",
+    });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "Member",
+    });
+
+    for (const participant of [leader, member]) {
+      await setAvailabilitySlot({
+        memberId: participant.id,
+        date: "2026-06-07",
+        hour: 16,
+        status: "AVAILABLE",
+        now: new Date("2026-06-07T06:00:00.000Z"),
+      } as Parameters<typeof setAvailabilitySlot>[0] & { now: Date });
+      await setAvailabilitySlot({
+        memberId: participant.id,
+        date: "2026-06-07",
+        hour: 17,
+        status: "AVAILABLE",
+        now: new Date("2026-06-07T06:00:00.000Z"),
+      } as Parameters<typeof setAvailabilitySlot>[0] & { now: Date });
+    }
+
+    const recommendations = await getRecommendedScheduleSlots({
+      dates: ["2026-06-07"],
+      groupId: group.id,
+      hours: [16, 17],
+      now: new Date("2026-06-07T07:30:00.000Z"),
+    } as Parameters<typeof getRecommendedScheduleSlots>[0] & { now: Date });
+
+    expect(recommendations.map((slot) => slot.hour)).toEqual([17]);
   });
 });

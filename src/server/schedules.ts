@@ -1,6 +1,8 @@
 import { ConfirmationStatus } from "@prisma/client";
+import { isDateTimeInPast } from "@/lib/time-slots";
 import { db } from "@/server/db";
 import { queueScheduleNotificationJobs } from "@/server/notifications";
+import { buildRaidGuideNotes } from "@/server/raid-guide-notes";
 
 async function requireScheduleManager(input: {
   actorMemberId: string;
@@ -34,6 +36,7 @@ export async function createScheduleFromTemplate(input: {
   title: string;
   startsAt: string;
   createdByMemberId: string;
+  now?: Date;
 }) {
   const template = await db.raidTemplate.findUnique({
     where: { id: input.templateId },
@@ -53,12 +56,21 @@ export async function createScheduleFromTemplate(input: {
     throw new Error("공대장만 일정을 만들 수 있습니다");
   }
 
+  const startsAt = new Date(input.startsAt);
+  if (Number.isNaN(startsAt.getTime())) {
+    throw new Error("일정 시작 시간이 올바르지 않습니다");
+  }
+  if (isDateTimeInPast(input.startsAt, input.now)) {
+    throw new Error("지난 시간에는 일정을 생성할 수 없습니다");
+  }
+
   const schedule = await db.schedule.create({
     data: {
       groupId: input.groupId,
       templateId: input.templateId,
       title: input.title.trim(),
-      startsAt: new Date(input.startsAt),
+      startsAt,
+      notes: buildRaidGuideNotes(template),
       createdByMemberId: input.createdByMemberId,
       slots: {
         create: template.slots.map((slot) => ({

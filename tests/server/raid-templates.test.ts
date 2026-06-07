@@ -300,7 +300,7 @@ describe("raid templates", () => {
       groupId: group.id,
       templateId: legacyTemplate.id,
       title: "기존 일정",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 

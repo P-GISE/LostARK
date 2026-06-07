@@ -1,4 +1,5 @@
 import { AvailabilityStatus } from "@prisma/client";
+import { isKstAvailabilitySlotInPast } from "@/lib/time-slots";
 import { db } from "@/server/db";
 
 export type GroupAvailabilitySlot = {
@@ -112,9 +113,14 @@ export async function setAvailabilitySlot(input: {
   date: string;
   hour: number;
   status: keyof typeof AvailabilityStatus;
+  now?: Date;
 }) {
   if (!Number.isInteger(input.hour) || input.hour < 0 || input.hour > 47) {
     throw new Error("가능 시간 시간이 올바르지 않습니다");
+  }
+
+  if (isKstAvailabilitySlotInPast(input.date, input.hour, input.now)) {
+    throw new Error("지난 시간에는 가능 시간을 입력할 수 없습니다");
   }
 
   const startsAt = kstSlotDate(input.date, input.hour);
@@ -341,7 +347,11 @@ export async function getRecommendedScheduleSlots(input: {
   dates: string[];
   hours: number[];
   limit?: number;
+  now?: Date;
 }) {
   const overview = await getGroupAvailabilityOverview(input);
-  return recommendScheduleSlots(overview, input.limit);
+  const futureSlots = overview.filter(
+    (slot) => !isKstAvailabilitySlotInPast(slot.date, slot.hour, input.now),
+  );
+  return recommendScheduleSlots(futureSlots, input.limit);
 }

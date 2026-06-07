@@ -49,7 +49,7 @@ describe("SchedulesPage", () => {
       await SchedulesPage({
         searchParams: Promise.resolve({
           from: "availability",
-          startsAt: "2026-06-04T20:00:00+09:00",
+          startsAt: "2030-06-04T20:00:00+09:00",
         }),
       }),
     );
@@ -57,9 +57,9 @@ describe("SchedulesPage", () => {
     expect(
       screen.getByRole("heading", { name: "선택한 가능 시간으로 일정 생성" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/2026\. 6\. 4\. 오후 8:00/)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("2026-06-05T21:00:00+09:00")).toHaveValue(
-      "2026-06-04T20:00:00+09:00",
+    expect(screen.getByText(/2030\. 6\. 4\. 오후 8:00/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("2030-06-05T21:00:00+09:00")).toHaveValue(
+      "2030-06-04T20:00:00+09:00",
     );
     expect(
       screen.getByRole("option", { name: "Thaemine · Hard · 1-4관문" }),
@@ -82,11 +82,11 @@ describe("SchedulesPage", () => {
       {
         availableCount: 3,
         availableMembers: ["A", "B", "C"],
-        date: "2026-06-04",
+        date: "2030-06-04",
         hour: 20,
         missingCount: 1,
         missingMembers: ["D"],
-        startsAt: "2026-06-04T20:00:00+09:00",
+        startsAt: "2030-06-04T20:00:00+09:00",
         tentativeCount: 0,
         tentativeMembers: [],
         totalMembers: 4,

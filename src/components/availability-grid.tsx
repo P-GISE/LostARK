@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, useState, useTransition } from "react";
+import { Fragment, useMemo, useRef, useState, useTransition } from "react";
 import { availabilityHours } from "@/lib/availability-hours";
 
 type Status = "AVAILABLE" | "UNAVAILABLE" | "TENTATIVE";
@@ -100,17 +100,32 @@ function uniqueChanges(changes: AvailabilityChange[]) {
 
 export function AvailabilityGrid({
   days = defaultDays,
+  disabledSlotKeys = [],
   initialStatuses = {},
   onChange,
 }: {
   days?: Day[];
+  disabledSlotKeys?: string[];
   initialStatuses?: Record<string, Status>;
   onChange: (changes: AvailabilityChange[]) => void;
 }) {
+  const disabledSlots = useMemo(
+    () => new Set(disabledSlotKeys),
+    [disabledSlotKeys],
+  );
   const [selectedStatus, setSelectedStatus] =
     useState<CellStatus>("AVAILABLE");
   const [selectedDayDates, setSelectedDayDates] = useState(
-    () => new Set(days.map((day) => day.date)),
+    () =>
+      new Set(
+        days
+          .filter((day) =>
+            availabilityHours.some(
+              (hour) => !disabledSlots.has(slotKey(day.date, hour)),
+            ),
+          )
+          .map((day) => day.date),
+      ),
   );
   const [rangeStartHour, setRangeStartHour] = useState(20);
   const [rangeEndHour, setRangeEndHour] = useState(24);
@@ -139,8 +154,17 @@ export function AvailabilityGrid({
     };
   }
 
+  function isSlotDisabled(date: string, hour: number) {
+    return disabledSlots.has(slotKey(date, hour));
+  }
+
+  function isDayFullyDisabled(day: Day) {
+    return availabilityHours.every((hour) => isSlotDisabled(day.date, hour));
+  }
+
   function paintCell(day: Day, hour: number) {
     const key = slotKey(day.date, hour);
+    if (isSlotDisabled(day.date, hour)) return;
     if (paintedKeysRef.current.has(key)) return;
     paintedKeysRef.current.add(key);
     commitChanges([selectedChange(day, hour)]);
@@ -163,19 +187,23 @@ export function AvailabilityGrid({
       pointerHandledClickRef.current = false;
       return;
     }
+    if (isSlotDisabled(day.date, hour)) return;
     commitChanges([selectedChange(day, hour)]);
   }
 
   function applyHours(hours: number[], targetDays = days) {
     commitChanges(
       targetDays.flatMap((day) =>
-        hours.map((hour) => selectedChange(day, hour)),
+        hours
+          .filter((hour) => !isSlotDisabled(day.date, hour))
+          .map((hour) => selectedChange(day, hour)),
       ),
     );
   }
 
   function selectDaySet(mode: "all" | "weekday" | "weekend" | "none") {
     const nextDays = days.filter((day) => {
+      if (isDayFullyDisabled(day)) return false;
       if (mode === "all") return true;
       if (mode === "none") return false;
       const isWeekend = day.label === "토" || day.label === "일";
@@ -186,6 +214,9 @@ export function AvailabilityGrid({
   }
 
   function toggleDay(date: string) {
+    const day = days.find((candidate) => candidate.date === date);
+    if (day && isDayFullyDisabled(day)) return;
+
     setSelectedDayDates((current) => {
       const next = new Set(current);
       if (next.has(date)) {
@@ -210,8 +241,16 @@ export function AvailabilityGrid({
     day.label === "토" || day.label === "일",
   );
   const selectedDayCount = selectedDayDates.size;
+  const selectedRangeHours = availabilityHours.filter(
+    (hour) => hour >= rangeStartHour && hour < rangeEndHour,
+  );
+  const selectedRangeDays = days.filter((day) => selectedDayDates.has(day.date));
   const canApplyRange =
-    selectedDayCount > 0 && rangeEndHour > rangeStartHour;
+    selectedDayCount > 0 &&
+    rangeEndHour > rangeStartHour &&
+    selectedRangeDays.some((day) =>
+      selectedRangeHours.some((hour) => !isSlotDisabled(day.date, hour)),
+    );
 
   return (
     <div
@@ -283,14 +322,18 @@ export function AvailabilityGrid({
             <div className="flex flex-wrap gap-2">
               {days.map((day) => {
                 const selected = selectedDayDates.has(day.date);
+                const disabled = isDayFullyDisabled(day);
                 return (
                   <button
                     aria-pressed={selected}
                     className={`h-9 rounded-md border px-3 text-sm font-medium transition ${
-                      selected
+                      disabled
+                        ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
+                        : selected
                         ? "border-zinc-950 bg-zinc-950 text-white"
                         : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
                     }`}
+                    disabled={disabled}
                     key={day.date}
                     onClick={() => toggleDay(day.date)}
                     type="button"
@@ -359,11 +402,21 @@ export function AvailabilityGrid({
             <div className="mt-0.5 text-zinc-400">{day.date.slice(5)}</div>
           </div>
         ))}
-        {availabilityHours.map((hour) => (
+        {availabilityHours.map((hour) => {
+          const isHourDisabled = days.every((day) =>
+            isSlotDisabled(day.date, hour),
+          );
+
+          return (
           <Fragment key={hour}>
             <button
               aria-label={`${displayHour(hour)} 전체 입력`}
-              className="sticky left-0 z-10 flex min-h-11 items-center rounded border border-transparent bg-zinc-50 px-1 text-left text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-white sm:min-h-12"
+              className={`sticky left-0 z-10 flex min-h-11 items-center rounded border border-transparent bg-zinc-50 px-1 text-left text-sm font-medium transition sm:min-h-12 ${
+                isHourDisabled
+                  ? "cursor-not-allowed text-zinc-300"
+                  : "text-zinc-600 hover:border-zinc-300 hover:bg-white"
+              }`}
+              disabled={isHourDisabled}
               onClick={() => applyHours([hour])}
               type="button"
             >
@@ -372,17 +425,21 @@ export function AvailabilityGrid({
             {days.map((day) => {
               const key = slotKey(day.date, hour);
               const cellStatus = statuses[key];
+              const disabled = isSlotDisabled(day.date, hour);
 
               return (
                 <button
-                  aria-label={`${day.label} ${displayHour(hour)} ${cellLabel(
-                    cellStatus ?? null,
-                  )}`}
+                  aria-label={`${day.label} ${displayHour(hour)} ${
+                    disabled ? "지난 시간" : cellLabel(cellStatus ?? null)
+                  }`}
                   className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-zinc-50 sm:min-h-12 sm:px-3 ${
-                    cellStatus
+                    disabled
+                      ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 hover:bg-zinc-100"
+                      : cellStatus
                       ? statusClasses[cellStatus]
                       : "border-zinc-200 bg-white text-zinc-500"
                   }`}
+                  disabled={disabled}
                   key={key}
                   onClick={() => handleClick(day, hour)}
                   onPointerDown={() => startPainting(day, hour)}
@@ -395,18 +452,19 @@ export function AvailabilityGrid({
                 >
                   <span className="block font-medium">{displayHour(hour)}</span>
                   <span className="mt-1 block text-xs">
-                    {cellLabel(cellStatus ?? null)}
+                    {disabled ? "지난 시간" : cellLabel(cellStatus ?? null)}
                   </span>
                 </button>
               );
             })}
           </Fragment>
-        ))}
+          );
+        })}
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
         {(["AVAILABLE", "TENTATIVE", "UNAVAILABLE"] as Status[]).map((status) => {
-          const count = Object.values(statuses).filter(
-            (value) => value === status,
+          const count = Object.entries(statuses).filter(
+            ([key, value]) => value === status && !disabledSlots.has(key),
           ).length;
           return (
             <div

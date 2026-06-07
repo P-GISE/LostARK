@@ -2,9 +2,11 @@ import { revalidatePath } from "next/cache";
 import { ScheduleAttendancePanel } from "@/components/schedule-attendance-panel";
 import { SlotEditor } from "@/components/slot-editor";
 import {
+  Badge,
   EmptyState,
   PageHeader,
   SectionPanel,
+  cx,
   dangerButtonClassName,
   inputClassName,
   pageShellClassName,
@@ -116,48 +118,110 @@ export default async function ScheduleDetailPage({
 
   const attendances = await listScheduleAttendances(schedule.id);
   const assignedCount = schedule.slots.filter((slot) => slot.assignedMemberId).length;
+  const scheduleNotes = schedule.notes.trim();
+  const scheduleDateText = schedule.startsAt.toLocaleString("ko-KR");
+  const scheduleStatusText =
+    schedule.status === "CANCELED" ? "취소됨" : "진행 중";
 
   return (
     <main className={pageShellClassName}>
       <PageHeader
-        description={`${schedule.template.name} / ${schedule.startsAt.toLocaleString("ko-KR")} / ${assignedCount}명 배정`}
+        description={`${schedule.template.name} / ${scheduleDateText} / ${assignedCount}명 배정`}
         eyebrow="일정 상세"
         title={schedule.title}
       />
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,22rem)_1fr]">
         <div className="grid content-start gap-4">
           <SectionPanel title="일정 정보">
-            <form action={editSchedule} className="grid gap-3">
-              <input
-                className={inputClassName}
-                defaultValue={schedule.title}
-                name="title"
-                required
-              />
-              <input
-                className={inputClassName}
-                defaultValue={schedule.startsAt.toISOString()}
-                name="startsAt"
-                required
-              />
-              <textarea
-                className={textareaClassName}
-                defaultValue={schedule.notes}
-                name="notes"
-                placeholder="메모"
-              />
-              <button className={primaryButtonClassName}>일정 저장</button>
-            </form>
+            <div className="grid gap-4">
+              <dl className="grid gap-2 text-sm">
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                  <dt className="text-slate-500">템플릿</dt>
+                  <dd className="min-w-0 break-words font-medium text-slate-950">
+                    {schedule.template.name}
+                  </dd>
+                </div>
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                  <dt className="text-slate-500">시간</dt>
+                  <dd className="font-medium text-slate-950">{scheduleDateText}</dd>
+                </div>
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                  <dt className="text-slate-500">배정</dt>
+                  <dd className="font-medium text-slate-950">
+                    {assignedCount} / {schedule.slots.length}명
+                  </dd>
+                </div>
+                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                  <dt className="text-slate-500">상태</dt>
+                  <dd className="font-medium text-slate-950">{scheduleStatusText}</dd>
+                </div>
+              </dl>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-500">메모</div>
+                <div
+                  className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700"
+                  data-testid="schedule-notes-summary"
+                >
+                  {scheduleNotes || "등록된 메모가 없습니다."}
+                </div>
+              </div>
+
+              <details className="group border-t border-slate-100 pt-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-800 [&::-webkit-details-marker]:hidden">
+                  <span>일정 수정</span>
+                  <span className="text-xs font-medium text-slate-500 group-open:hidden">
+                    열기
+                  </span>
+                  <span className="hidden text-xs font-medium text-slate-500 group-open:inline">
+                    닫기
+                  </span>
+                </summary>
+                <div className="mt-3 grid gap-3">
+                  <form action={editSchedule} className="grid gap-3">
+                    <label className="grid gap-1 text-xs font-semibold text-slate-500">
+                      제목
+                      <input
+                        className={inputClassName}
+                        defaultValue={schedule.title}
+                        name="title"
+                        required
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-semibold text-slate-500">
+                      시간
+                      <input
+                        className={inputClassName}
+                        defaultValue={schedule.startsAt.toISOString()}
+                        name="startsAt"
+                        required
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-semibold text-slate-500">
+                      메모
+                      <textarea
+                        className={cx(textareaClassName, "max-h-40 overflow-y-auto")}
+                        defaultValue={schedule.notes}
+                        name="notes"
+                        placeholder="메모"
+                      />
+                    </label>
+                    <button className={primaryButtonClassName}>일정 저장</button>
+                  </form>
+
+                  {schedule.status !== "CANCELED" ? (
+                    <form action={cancelCurrentSchedule}>
+                      <button className={dangerButtonClassName}>일정 취소</button>
+                    </form>
+                  ) : (
+                    <p className="rounded-md border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                      취소된 일정입니다.
+                    </p>
+                  )}
+                </div>
+              </details>
+            </div>
           </SectionPanel>
-          {schedule.status !== "CANCELED" ? (
-            <form action={cancelCurrentSchedule}>
-              <button className={dangerButtonClassName}>일정 취소</button>
-            </form>
-          ) : (
-            <p className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-sm text-rose-700">
-              취소된 일정입니다.
-            </p>
-          )}
         </div>
         <div>
           <ScheduleAttendancePanel
@@ -170,9 +234,19 @@ export default async function ScheduleDetailPage({
             }))}
             currentMemberId={member.id}
           />
-          <section className="mt-6">
-            <h2 className="text-lg font-semibold text-slate-950">자리 배정</h2>
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <SectionPanel
+            action={
+              <Badge tone={assignedCount === schedule.slots.length ? "success" : "info"}>
+                {`${assignedCount} / ${schedule.slots.length}명 배정`}
+              </Badge>
+            }
+            className="mt-6"
+            title="자리 배정"
+          >
+            <div
+              className="divide-y divide-slate-100 overflow-hidden rounded-md border border-slate-100"
+              data-testid="schedule-slot-list"
+            >
               {schedule.slots.map((slot) => (
                 <SlotEditor
                   action={assignSlot}
@@ -188,7 +262,7 @@ export default async function ScheduleDetailPage({
                 />
               ))}
             </div>
-          </section>
+          </SectionPanel>
         </div>
       </div>
     </main>

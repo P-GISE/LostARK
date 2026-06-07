@@ -149,7 +149,7 @@ export default async function AdminPage() {
                         <ConfirmSubmitButton
                           className={cleanupButtonClassName}
                           disabled={isAdminEmail(user.email)}
-                          message={`로그인 유저 "${user.email}" 계정을 삭제할까요? 공대 멤버 기록은 남습니다.`}
+                          message={`로그인 유저 "${user.email}" 계정을 삭제할까요? 연결된 공대원 기록, 참석 체크, 가능 시간, 캐릭터, 생성한 일정도 삭제됩니다.`}
                         >
                           유저 삭제
                         </ConfirmSubmitButton>

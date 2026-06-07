@@ -71,14 +71,45 @@ export async function deleteAdminUser(input: {
 
   const target = await db.user.findUnique({
     where: { id: input.userId },
-    select: { email: true },
+    select: {
+      email: true,
+      memberships: {
+        select: { id: true },
+      },
+    },
   });
   if (target && isAdminEmail(target.email)) {
     throw new Error("관리자 계정은 삭제할 수 없습니다");
   }
 
-  return db.user.delete({
-    where: { id: input.userId },
+  const memberIds = target?.memberships.map((membership) => membership.id) ?? [];
+
+  return db.$transaction(async (tx) => {
+    if (memberIds.length > 0) {
+      await tx.schedule.deleteMany({
+        where: { createdByMemberId: { in: memberIds } },
+      });
+      await tx.scheduleSlot.updateMany({
+        where: {
+          OR: [
+            { assignedMemberId: { in: memberIds } },
+            { assignedCharacter: { memberId: { in: memberIds } } },
+          ],
+        },
+        data: {
+          assignedMemberId: null,
+          assignedCharacterId: null,
+          confirmationStatus: "PENDING",
+        },
+      });
+      await tx.member.deleteMany({
+        where: { id: { in: memberIds } },
+      });
+    }
+
+    return tx.user.delete({
+      where: { id: input.userId },
+    });
   });
 }
 

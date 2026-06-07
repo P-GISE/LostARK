@@ -110,6 +110,35 @@ describe("AvailabilityGrid", () => {
     ).toBeInTheDocument();
   });
 
+  it("disables past slots and skips them during range apply", async () => {
+    const onChange = vi.fn();
+    render(
+      <AvailabilityGrid
+        days={[{ date: "2026-06-04", label: "목" }]}
+        disabledSlotKeys={["2026-06-04:20"]}
+        initialStatuses={{ "2026-06-04:20": "AVAILABLE" }}
+        onChange={onChange}
+      />,
+    );
+
+    const disabledCell = screen.getByRole("button", {
+      name: /목 20:00 지난 시간/,
+    });
+    expect(disabledCell).toBeDisabled();
+
+    await userEvent.click(disabledCell);
+    expect(onChange).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "조율" }));
+    await userEvent.selectOptions(screen.getByLabelText("시작 시간"), "20");
+    await userEvent.selectOptions(screen.getByLabelText("끝 시간"), "22");
+    await userEvent.click(screen.getByRole("button", { name: "선택 범위 적용" }));
+
+    expect(onChange).toHaveBeenCalledWith([
+      { date: "2026-06-04", hour: 21, status: "TENTATIVE" },
+    ]);
+  });
+
   it("does not render fixed quick input buttons", () => {
     render(
       <AvailabilityGrid

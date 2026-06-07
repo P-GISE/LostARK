@@ -16,6 +16,7 @@ import {
   compareRaidTemplateDisplay,
   formatRaidTemplateLabel,
 } from "@/lib/raid-template-display";
+import { isDateTimeInPast } from "@/lib/time-slots";
 import {
   getRecommendedScheduleSlots,
   type RecommendedScheduleSlot,
@@ -98,13 +99,16 @@ export default async function SchedulesPage({
 }) {
   const member = await requireCurrentMember();
   const params = await searchParams;
+  const now = new Date();
   const defaultStartsAt = params?.startsAt ?? "";
   const selectedFromAvailability =
-    params?.from === "availability" && defaultStartsAt.length > 0;
+    params?.from === "availability" &&
+    defaultStartsAt.length > 0 &&
+    !isDateTimeInPast(defaultStartsAt, now);
   const selectedStartsAtLabel = selectedFromAvailability
     ? formatStartsAt(defaultStartsAt)
     : null;
-  const schedules = await listUpcomingSchedules(member.groupId);
+  const schedules = await listUpcomingSchedules(member.groupId, now);
   const templates = (await listRaidTemplates(member.groupId)).sort(
     compareRaidTemplateDisplay,
   );
@@ -116,6 +120,7 @@ export default async function SchedulesPage({
           groupId: member.groupId,
           hours: availabilityHours,
           limit: 8,
+          now,
         })
       : [];
 
@@ -165,7 +170,7 @@ export default async function SchedulesPage({
               required
               className={inputClassName}
               defaultValue={defaultStartsAt}
-              placeholder="2026-06-05T21:00:00+09:00"
+              placeholder="2030-06-05T21:00:00+09:00"
             />
             <TemplateSelect templates={templates} />
             <button className={primaryButtonClassName}>
@@ -236,7 +241,7 @@ export default async function SchedulesPage({
                 name="startsAt"
                 required
                 className={inputClassName}
-                placeholder="2026-06-05T21:00:00+09:00"
+                placeholder="2030-06-05T21:00:00+09:00"
               />
               <TemplateSelect templates={templates} />
               <button className={secondaryButtonClassName}>

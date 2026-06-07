@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: ["tests/e2e/**", "node_modules/**", ".next/**"],
+    exclude: ["tests/e2e/**", "node_modules/**", ".next/**", "디스코드 봇/**"],
     environment: "jsdom",
     globals: true,
     setupFiles: ["./tests/setup.ts"],

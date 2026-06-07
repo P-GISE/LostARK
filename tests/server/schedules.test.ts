@@ -43,12 +43,52 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "Behemoth Friday",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 
     expect(schedule.slots).toHaveLength(1);
     expect(schedule.slots[0].label).toBe("DPS 1");
+    expect(schedule.notes).toBe("");
+  });
+
+  it("adds raid guide notes when creating a schedule from a supported template", async () => {
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "Guide Static",
+      leaderNickname: "GuideLead",
+    });
+    const template = await createRaidTemplate({
+      groupId: group.id,
+      name: "카제로스 2막: 부유하는 악몽의 진혼곡",
+      difficulty: "하드",
+      gates: "1-2",
+      requiredPlayers: 1,
+      requirements: "",
+      notes: "",
+      slots: [
+        {
+          label: "DPS 1",
+          role: "DPS",
+          required: true,
+          classPreference: "",
+          notes: "",
+        },
+      ],
+    });
+
+    const schedule = await createScheduleFromTemplate({
+      groupId: group.id,
+      templateId: template.id,
+      title: "Act 2 Guide",
+      startsAt: "2030-06-05T21:00:00+09:00",
+      createdByMemberId: leader.id,
+    });
+
+    expect(schedule.notes).toContain("준비물");
+    expect(schedule.notes).toContain("공대장 스킬");
+    expect(schedule.notes).toContain("카드");
+    expect(schedule.notes).toContain("뇌구빛");
+    expect(schedule.notes).toContain("니나브");
   });
 
   it("queues Discord DM notification jobs for group members when a schedule is created", async () => {
@@ -145,7 +185,7 @@ describe("schedules", () => {
         groupId: group.id,
         templateId: template.id,
         title: "멤버가 만든 일정",
-        startsAt: "2026-06-05T21:00:00+09:00",
+        startsAt: "2030-06-05T21:00:00+09:00",
         createdByMemberId: member.id,
       }),
     ).rejects.toThrow("공대장만 일정을 만들 수 있습니다");
@@ -154,10 +194,46 @@ describe("schedules", () => {
         groupId: group.id,
         templateId: template.id,
         title: "리더가 만든 일정",
-        startsAt: "2026-06-05T21:00:00+09:00",
+        startsAt: "2030-06-05T21:00:00+09:00",
         createdByMemberId: leader.id,
       }),
     ).resolves.toMatchObject({ title: "리더가 만든 일정" });
+  });
+
+  it("rejects schedules that start in the past", async () => {
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "Past Schedule",
+      leaderNickname: "Lead",
+    });
+    const template = await createRaidTemplate({
+      groupId: group.id,
+      name: "Raid",
+      difficulty: "Hard",
+      gates: "1",
+      requiredPlayers: 1,
+      requirements: "",
+      notes: "",
+      slots: [
+        {
+          label: "DPS 1",
+          role: "DPS",
+          required: true,
+          classPreference: "",
+          notes: "",
+        },
+      ],
+    });
+
+    await expect(
+      createScheduleFromTemplate({
+        groupId: group.id,
+        templateId: template.id,
+        title: "Past Raid",
+        startsAt: "2026-06-07T16:30:00+09:00",
+        createdByMemberId: leader.id,
+        now: new Date("2026-06-07T07:30:00.000Z"),
+      } as Parameters<typeof createScheduleFromTemplate>[0] & { now: Date }),
+    ).rejects.toThrow("지난 시간에는 일정을 생성할 수 없습니다");
   });
 
   it("rejects assigning a character owned by another member", async () => {
@@ -203,7 +279,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "Raid",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 
@@ -256,7 +332,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "Raid",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 
@@ -316,7 +392,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "Raid",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
     await assignScheduleSlot({
@@ -361,7 +437,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "Old title",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 
@@ -369,7 +445,7 @@ describe("schedules", () => {
       actorMemberId: leader.id,
       scheduleId: schedule.id,
       title: "New title",
-      startsAt: "2026-06-06T21:00:00+09:00",
+      startsAt: "2030-06-06T21:00:00+09:00",
       notes: "시간 변경",
     });
     const canceled = await cancelSchedule({
@@ -417,7 +493,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "Raid",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
     const assigned = await assignScheduleSlot({
@@ -467,7 +543,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "카멘 하드",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 
@@ -527,7 +603,7 @@ describe("schedules", () => {
       groupId: group.id,
       templateId: template.id,
       title: "카멘 하드",
-      startsAt: "2026-06-05T21:00:00+09:00",
+      startsAt: "2030-06-05T21:00:00+09:00",
       createdByMemberId: leader.id,
     });
 

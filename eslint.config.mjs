@@ -8,6 +8,7 @@ const eslintConfig = [
       ".superpowers/**",
       ".next/**",
       "node_modules/**",
+      "디스코드 봇/**",
       "coverage/**",
       "output/**",
       "test-results/**",

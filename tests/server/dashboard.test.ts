@@ -35,6 +35,7 @@ describe("dashboard", () => {
       date: "2026-06-06",
       hour: 20,
       status: "AVAILABLE",
+      now: new Date("2026-06-04T12:00:00+09:00"),
     });
 
     const summary = await getDashboardSummary(

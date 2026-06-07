@@ -1,7 +1,13 @@
 # Lost Ark Party Planner
 
-Lost Ark raid and party scheduling app built with Next.js, Prisma, PostgreSQL,
-Discord OAuth/DM notifications, and Lost Ark Open API character sync.
+Open-source Lost Ark raid and party scheduling app built with Next.js,
+Prisma, PostgreSQL, Discord OAuth/DM notifications, and Lost Ark Open API
+character sync.
+
+This project is maintained as a practical tool for raid leaders and static
+groups that need to coordinate schedules, member availability, party slots,
+character information, and reminders without relying on scattered chats or
+manual spreadsheets.
 
 Production URL:
 
@@ -15,10 +21,55 @@ https://lostark-party.pigs0516.com
 - Schedule, calendar, and template views
 - Main-character import from Lost Ark Open API
 - Same-server roster sync with item level and combat power
+- Future-only availability and schedule creation safeguards
+- Raid-template guide notes for cards, battle items, and leader skills
+- Compact schedule detail and slot assignment workflows
+- Admin tools for user cleanup and group maintenance
 - Discord OAuth connection for each member
 - Discord DM notifications for schedule creation and reminders
 - Notification worker and automatic character-sync worker
 - PC-primary, AWS-backup failover through Cloudflare Tunnel and AWS Lambda
+
+## Why This Project Exists
+
+Lost Ark raid groups often coordinate across several tools at once: chat
+messages for schedules, screenshots or spreadsheets for slots, manual character
+checks, and separate reminders. That workflow becomes error-prone as soon as
+members change availability or the raid leader needs to confirm attendance.
+
+Lost Ark Party Planner focuses on the operational side of group play:
+
+- create schedules from reusable raid templates
+- prevent accidental creation of past availability or schedules
+- track each member's attendance response and memo
+- assign characters to raid slots with a compact review UI
+- sync character data from the Lost Ark Open API
+- notify connected Discord users when schedules are created or due soon
+- keep raid preparation notes attached to the schedule itself
+
+The goal is to provide a maintainable open-source reference for game-community
+scheduling, Discord-integrated reminders, and API-backed roster management.
+
+## Maintainer Workflow
+
+The repository is actively maintained with a test-first workflow for behavior
+changes. Core server flows, page rendering, and UI components are covered with
+Vitest and Testing Library. Before pushing code changes, the expected
+verification path is:
+
+```powershell
+npm test
+npm run lint
+npm run build
+```
+
+Current maintenance focus:
+
+- safer member and admin deletion behavior
+- clearer schedule and availability constraints
+- better schedule-detail UX for raid leaders
+- richer raid-template notes for preparation, card, and leader-skill guidance
+- stable Discord and Lost Ark Open API integrations
 
 ## Stack
 

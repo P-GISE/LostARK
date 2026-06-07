@@ -9,6 +9,7 @@ import {
   DAY_START_HOUR,
 } from "@/lib/availability-hours";
 import { buildLostArkWeekDays } from "@/lib/lostark-week";
+import { isKstAvailabilitySlotInPast } from "@/lib/time-slots";
 import {
   clearAvailabilitySlot,
   formatKstDate,
@@ -39,6 +40,7 @@ function statusKey(block: {
 
 export default async function CalendarPage() {
   const member = await requireCurrentMember();
+  const now = new Date();
   const days = buildLostArkWeekDays();
   const rangeStart = kstSlotDate(days[0].date, DAY_START_HOUR);
   const rangeEnd = kstSlotDate(days[days.length - 1].date, DAY_END_HOUR);
@@ -54,6 +56,11 @@ export default async function CalendarPage() {
   const initialStatuses = Object.fromEntries(
     blocks.map((block) => [statusKey(block), block.status]),
   ) as Record<string, Status>;
+  const disabledSlotKeys = days.flatMap((day) =>
+    availabilityHours
+      .filter((hour) => isKstAvailabilitySlotInPast(day.date, hour, now))
+      .map((hour) => `${day.date}:${hour}`),
+  );
 
   async function saveCells(changes: Array<{
     date: string;
@@ -97,6 +104,7 @@ export default async function CalendarPage() {
       >
         <AvailabilityGrid
           days={days}
+          disabledSlotKeys={disabledSlotKeys}
           initialStatuses={initialStatuses}
           onChange={saveCells}
         />
