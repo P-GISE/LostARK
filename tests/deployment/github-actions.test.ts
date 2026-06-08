@@ -7,6 +7,8 @@ describe("GitHub Actions VPS deployment workflow", () => {
   it("deploys main branch pushes to the VPS over SSH", () => {
     expect(workflow).toContain("name: Deploy VPS");
     expect(workflow).toContain("branches: [main]");
+    expect(workflow).toContain("Validate deploy secrets");
+    expect(workflow).toContain("Missing deploy secret");
     expect(workflow).toContain("appleboy/ssh-action");
     expect(workflow).toContain("secrets.VPS_HOST");
     expect(workflow).toContain("secrets.VPS_USER");
