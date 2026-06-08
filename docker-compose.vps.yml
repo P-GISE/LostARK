@@ -52,6 +52,8 @@ services:
       POSTGRES_USER: lostark
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: lostark_party
+    ports:
+      - "${POSTGRES_HOST_BIND:-127.0.0.1}:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lostark -d lostark_party"]
       interval: 10s

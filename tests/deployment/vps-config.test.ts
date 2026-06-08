@@ -30,10 +30,13 @@ describe("VPS deployment config", () => {
     expect(envExample).not.toContain("DATABASE_URL=postgresql://lostark:lostark@");
   });
 
-  it("binds the app to localhost for Tailscale Serve on the VPS host", () => {
+  it("binds the app and database safely on the VPS host", () => {
     const compose = read("docker-compose.vps.yml");
 
     expect(compose).toContain('"127.0.0.1:3000:3000"');
+    expect(compose).toContain(
+      '"${POSTGRES_HOST_BIND:-127.0.0.1}:5432:5432"',
+    );
   });
 
   it("copies TypeScript path config into the runner image for worker scripts", () => {
@@ -50,5 +53,25 @@ describe("VPS deployment config", () => {
     expect(compose).toContain("profiles:");
     expect(compose).toContain("- public");
     expect(compose).toContain("env_file: .env");
+  });
+
+  it("documents canonical production env values for VPS and PC runtimes", () => {
+    const vpsEnv = read(".env.vps.example");
+    const pcEnv = read(".env.pc-production.example");
+
+    expect(vpsEnv).toContain("APP_BASE_URL=https://lostark-party.pigs0516.com");
+    expect(vpsEnv).toContain("APP_DOMAIN=lostark-party.pigs0516.com");
+    expect(vpsEnv).toContain(
+      "DISCORD_REDIRECT_URI=https://lostark-party.pigs0516.com/api/discord/oauth/callback",
+    );
+    expect(vpsEnv).toContain("POSTGRES_HOST_BIND=127.0.0.1");
+
+    expect(pcEnv).toContain("APP_BASE_URL=https://lostark-party.pigs0516.com");
+    expect(pcEnv).toContain("APP_DOMAIN=lostark-party.pigs0516.com");
+    expect(pcEnv).toContain(
+      "DISCORD_REDIRECT_URI=https://lostark-party.pigs0516.com/api/discord/oauth/callback",
+    );
+    expect(pcEnv).toContain("DATABASE_URL=");
+    expect(pcEnv).toContain("server-private-ip");
   });
 });
