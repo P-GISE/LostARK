@@ -11,6 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-e2e.mjs",
+    "config:check:pc": "node scripts/production-config.mjs --role pc --env-file .env",
+    "config:check:server": "node scripts/production-config.mjs --role server --env-file .env",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
