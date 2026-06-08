@@ -37,4 +37,15 @@ describe("layout spacing", () => {
     }
     expect(source("src/components/app-shell.tsx")).toContain("contentShellClassName");
   });
+
+  it("loads the Google AdSense script once from the root layout", () => {
+    const layout = source("src/app/layout.tsx");
+
+    expect(layout).toContain("next/script");
+    expect(layout).toContain("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+    expect(layout).toContain("ca-pub-5055865634735480");
+    expect(layout).toContain('crossOrigin="anonymous"');
+    expect(layout).toContain('strategy="beforeInteractive"');
+    expect(layout).toContain('"google-adsense-account": ADSENSE_CLIENT_ID');
+  });
 });
