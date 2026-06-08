@@ -22,8 +22,8 @@ export default async function HomePage() {
   if (!member) {
     return (
       <main className={narrowPageShellClassName}>
-        <div className={`${narrowContentClassName} rounded-lg border border-slate-200 bg-white p-6 shadow-sm`}>
-          <div className="text-sm font-semibold text-cyan-700">LOST ARK PARTY</div>
+        <div className={`${narrowContentClassName} rounded-lg border border-slate-200/90 bg-white p-6 shadow-sm shadow-slate-200/70`}>
+          <div className="text-sm font-semibold text-teal-700">LOST ARK PARTY</div>
           <h1 className="mt-2 text-2xl font-semibold text-slate-950">
             공대 일정과 캐릭터를 한 화면에서 관리합니다
           </h1>

@@ -361,7 +361,7 @@ function CharacterRaidChecklist({
                       "flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-xs font-medium transition",
                       completed
                         ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900",
+                        : "border-slate-200 bg-white text-slate-700 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-900",
                     );
 
                     if (!canEdit) {
@@ -379,7 +379,7 @@ function CharacterRaidChecklist({
                           {canCreateSchedule && !groupCompleted && !completed ? (
                             <Link
                               aria-label={`${label} 일정 만들기`}
-                              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-50"
+                              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-teal-800 transition hover:border-teal-300 hover:bg-teal-50"
                               href={scheduleTemplateLink(template.id)}
                             >
                               일정 만들기
@@ -426,7 +426,7 @@ function CharacterRaidChecklist({
                         {canCreateSchedule && !groupCompleted && !completed ? (
                           <Link
                             aria-label={`${label} 일정 만들기`}
-                            className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-50"
+                            className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-teal-800 transition hover:border-teal-300 hover:bg-teal-50"
                             href={scheduleTemplateLink(template.id)}
                           >
                             일정 만들기
@@ -596,7 +596,7 @@ export default async function MembersPage({
                   <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {member.characters.map((character) => (
                       <div
-                        className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4"
+                        className="min-w-0 rounded-lg border border-slate-200/90 bg-slate-50/80 p-4"
                         key={character.id}
                       >
                         <div className="flex flex-wrap items-center gap-2">

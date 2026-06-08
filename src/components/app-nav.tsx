@@ -38,9 +38,9 @@ export function AppNavLinks({
                 : "flex h-9 w-full items-center rounded-md px-3 text-sm font-medium transition",
               active
                 ? variant === "tab"
-                  ? "bg-cyan-700 text-white shadow-sm hover:bg-cyan-800"
-                  : "bg-cyan-50 text-cyan-900"
-                : "text-slate-600 hover:bg-cyan-50 hover:text-cyan-900",
+                  ? "bg-slate-900 text-white shadow-sm hover:bg-slate-800"
+                  : "bg-teal-50 text-teal-900"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
             )}
             href={item.href}
             key={item.href}

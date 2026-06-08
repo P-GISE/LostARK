@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { signSessionValue, USER_COOKIE_NAME } from "@/server/auth-context";
 import { createUser } from "@/server/accounts";
 import { setAvailabilitySlot } from "@/server/availability";
 import {
@@ -21,7 +22,39 @@ import {
   setScheduleAttendance,
 } from "@/server/schedules";
 
+const mocks = vi.hoisted(() => ({
+  cookies: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+  redirect: vi.fn((path: string) => {
+    throw new Error(`NEXT_REDIRECT:${path}`);
+  }),
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: mocks.cookies,
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: mocks.notFound,
+  redirect: mocks.redirect,
+}));
+
+function mockUserSession(userId: string) {
+  mocks.cookies.mockResolvedValue({
+    get: vi.fn((name: string) =>
+      name === USER_COOKIE_NAME ? { value: signSessionValue(userId) } : undefined,
+    ),
+  });
+}
+
 describe("admin", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    delete process.env.ADMIN_EMAILS;
+  });
+
   it("matches admin emails case-insensitively from ADMIN_EMAILS", () => {
     process.env.ADMIN_EMAILS = "Owner@Example.com, second@example.com";
 
@@ -90,6 +123,16 @@ describe("admin", () => {
     const id = randomUUID();
     const adminEmail = `cleanup-admin-${id}@example.com`;
     process.env.ADMIN_EMAILS = adminEmail;
+    const adminUser = await createUser({
+      email: adminEmail,
+      password: "password123",
+      displayName: "Cleanup Admin",
+    });
+    const nonAdminUser = await createUser({
+      email: `cleanup-non-admin-${id}@example.com`,
+      password: "password123",
+      displayName: "Cleanup Non Admin",
+    });
     const user = await createUser({
       email: `cleanup-user-${id}@example.com`,
       password: "password123",
@@ -109,29 +152,36 @@ describe("admin", () => {
       createdByMemberId: leader.id,
     });
 
+    mockUserSession(nonAdminUser.id);
     await expect(
       deleteAdminSchedule({
-        adminEmail: "member@example.com",
         scheduleId: schedule.id,
       }),
-    ).rejects.toThrow("관리자 권한이 필요합니다");
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(await db.schedule.findUnique({ where: { id: schedule.id } })).not.toBeNull();
 
-    await deleteAdminSchedule({ adminEmail, scheduleId: schedule.id });
+    mockUserSession(adminUser.id);
+    await deleteAdminSchedule({ scheduleId: schedule.id });
     expect(await db.schedule.findUnique({ where: { id: schedule.id } })).toBeNull();
 
-    await deleteAdminUser({ adminEmail, userId: user.id });
+    await deleteAdminUser({ userId: user.id });
     expect(await db.user.findUnique({ where: { id: user.id } })).toBeNull();
     expect(await db.member.findUnique({ where: { id: leader.id } })).toBeNull();
 
-    await deleteAdminGroup({ adminEmail, groupId: group.id });
+    await deleteAdminGroup({ groupId: group.id });
     expect(await db.group.findUnique({ where: { id: group.id } })).toBeNull();
     expect(await db.member.findMany({ where: { groupId: group.id } })).toEqual([]);
-  });
+  }, 30000);
 
   it("deletes a login user's memberships, schedule checks, and created schedules", async () => {
     const id = randomUUID();
     const adminEmail = `cascade-admin-${id}@example.com`;
     process.env.ADMIN_EMAILS = adminEmail;
+    const adminUser = await createUser({
+      email: adminEmail,
+      password: "password123",
+      displayName: "Cascade Admin",
+    });
     const targetUser = await createUser({
       email: `cascade-target-${id}@example.com`,
       password: "password123",
@@ -215,7 +265,8 @@ describe("admin", () => {
         createdByMemberId: targetLeader.id,
       });
 
-      await deleteAdminUser({ adminEmail, userId: targetUser.id });
+      mockUserSession(adminUser.id);
+      await deleteAdminUser({ userId: targetUser.id });
 
       expect(await db.user.findUnique({ where: { id: targetUser.id } })).toBeNull();
       expect(await db.member.findUnique({ where: { id: targetMember.id } })).toBeNull();
@@ -260,5 +311,5 @@ describe("admin", () => {
         },
       });
     }
-  }, 15000);
+  }, 30000);
 });

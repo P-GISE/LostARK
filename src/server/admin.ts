@@ -21,12 +21,6 @@ export function isAdminUser(user: Pick<User, "email"> | null | undefined) {
   return isAdminEmail(user?.email);
 }
 
-function requireAdminEmail(adminEmail: string) {
-  if (!isAdminEmail(adminEmail)) {
-    throw new Error("관리자 권한이 필요합니다");
-  }
-}
-
 export async function requireAdminUser() {
   const user = await getCurrentUser();
 
@@ -42,10 +36,9 @@ export async function requireAdminUser() {
 }
 
 export async function deleteAdminSchedule(input: {
-  adminEmail: string;
   scheduleId: string;
 }) {
-  requireAdminEmail(input.adminEmail);
+  await requireAdminUser();
 
   return db.schedule.delete({
     where: { id: input.scheduleId },
@@ -53,10 +46,9 @@ export async function deleteAdminSchedule(input: {
 }
 
 export async function deleteAdminGroup(input: {
-  adminEmail: string;
   groupId: string;
 }) {
-  requireAdminEmail(input.adminEmail);
+  await requireAdminUser();
 
   return db.group.delete({
     where: { id: input.groupId },
@@ -64,10 +56,9 @@ export async function deleteAdminGroup(input: {
 }
 
 export async function deleteAdminUser(input: {
-  adminEmail: string;
   userId: string;
 }) {
-  requireAdminEmail(input.adminEmail);
+  await requireAdminUser();
 
   const target = await db.user.findUnique({
     where: { id: input.userId },

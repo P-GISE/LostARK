@@ -35,10 +35,10 @@ function AccountMenu({
       aria-label="계정 메뉴"
       className="relative ml-auto"
     >
-      <summary className="inline-flex h-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-900 [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-900 [&::-webkit-details-marker]:hidden">
         더보기
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+      <div className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg shadow-slate-300/40">
         <div className="border-b border-slate-100 px-3 py-2">
           <div className="text-xs font-semibold text-slate-500">현재 공대</div>
           <div className="mt-0.5 truncate text-sm font-semibold text-slate-950">
@@ -76,11 +76,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className={`${contentShellClassName} py-2`}>
+      <header className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur">
+        <div className={`${contentShellClassName} py-2.5`}>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap">
-            <Link className="flex min-w-0 items-center gap-2 font-semibold" href="/">
-              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-cyan-700 text-sm text-white">
+            <Link className="flex min-w-0 items-center gap-2 font-semibold text-slate-950" href="/">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-sm text-white shadow-sm">
                 LA
               </span>
               <span className="truncate">
@@ -102,7 +102,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <AppNavLinks items={secondaryNavItems} />
                 </nav>
-                <div className="hidden rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 lg:block">
+                <div className="hidden max-w-48 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 lg:block">
                   {member.group.name}
                 </div>
                 <AccountMenu

@@ -54,7 +54,7 @@ function availabilityCellClassName(slot: GroupAvailabilitySlot) {
     return "border-emerald-200 bg-emerald-50";
   }
   if (percent >= 50) {
-    return "border-cyan-200 bg-cyan-50";
+    return "border-sky-200 bg-sky-50";
   }
   if (slot.availableMembers.length > 0 || slot.tentativeMembers.length > 0) {
     return "border-amber-200 bg-amber-50";
@@ -158,7 +158,7 @@ function SummaryMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="rounded-md border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-200/70">
       <div className="text-xs font-semibold text-slate-500">{label}</div>
       <div className="mt-1 text-xl font-semibold text-slate-950">{value}</div>
       <div className="mt-1 truncate text-xs text-slate-500">{detail}</div>
@@ -168,7 +168,7 @@ function SummaryMetric({
 
 function SlotRoster({ slot }: { slot: GroupAvailabilitySlot }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
+    <div className="rounded-md border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-200/60">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm font-semibold text-slate-950">
           {candidateTimeText(slot)}
@@ -227,8 +227,8 @@ export function AvailabilityOverview({
     <section className="space-y-5">
       <div className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-950">추천 시간</h2>
-          <p className="mt-1 text-sm text-zinc-500">
+          <h2 className="text-lg font-semibold text-slate-950">추천 시간</h2>
+          <p className="mt-1 text-sm text-slate-500">
             가능 인원이 많은 시간부터 정렬했습니다.
           </p>
         </div>
@@ -239,13 +239,13 @@ export function AvailabilityOverview({
           >
             {candidates.map((slot) => (
               <li
-                className="rounded-md border border-zinc-200 bg-white p-3 shadow-sm"
+                className="rounded-md border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-200/70"
                 key={`${slot.date}:${slot.hour}`}
               >
-                <div className="text-sm font-semibold text-zinc-950">
+                <div className="text-sm font-semibold text-slate-950">
                   {candidateTimeText(slot)}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-600">
+                <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-600">
                   <span className="font-medium text-emerald-800">
                     {`가능 ${slot.availableMembers.length}`}
                   </span>
@@ -253,12 +253,12 @@ export function AvailabilityOverview({
                   <span>{`불가 ${unavailableNames(slot).length}`}</span>
                 </div>
                 {slot.availableMembers.length > 0 ? (
-                  <div className="mt-2 truncate text-xs text-zinc-500">
+                  <div className="mt-2 truncate text-xs text-slate-500">
                     {namesText(slot.availableMembers)}
                   </div>
                 ) : null}
                 <Link
-                  className="mt-3 inline-flex h-8 items-center justify-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50"
+                  className="mt-3 inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-900"
                   href={scheduleLink(slot)}
                 >
                   이 시간으로 일정 만들기
@@ -267,7 +267,7 @@ export function AvailabilityOverview({
             ))}
           </ol>
         ) : (
-          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
+          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-sm text-slate-500">
             아직 추천할 시간이 없습니다.
           </div>
         )}
@@ -298,10 +298,10 @@ export function AvailabilityOverview({
       </div>
       <div className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-950">
+          <h2 className="text-lg font-semibold text-slate-950">
             공대 가능 시간 현황
           </h2>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             숫자와 색상으로 먼저 비교하고, 명단은 상세 영역에서 확인합니다.
           </p>
         </div>
@@ -330,25 +330,25 @@ export function AvailabilityOverview({
           />
         </div>
         {futureSlots.length > 0 ? (
-          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-md border border-slate-200/90 bg-white shadow-sm shadow-slate-200/70">
             <table
               aria-label="공대 가능 시간 밀도표"
               className="w-max min-w-full border-collapse text-sm"
             >
-              <thead className="bg-zinc-100 text-left text-xs font-semibold text-zinc-600">
+              <thead className="bg-slate-100 text-left text-xs font-semibold text-slate-600">
                 <tr>
-                  <th className="sticky left-0 z-10 border-b border-zinc-200 bg-zinc-100 px-3 py-2">
+                  <th className="sticky left-0 z-10 border-b border-slate-200 bg-slate-100 px-3 py-2">
                     시간
                   </th>
                   {dates.map((date) => (
                     <th
-                      className="min-w-32 border-b border-zinc-200 px-3 py-2"
+                      className="min-w-32 border-b border-slate-200 px-3 py-2"
                       key={date}
                     >
-                      <span className="block text-zinc-800">
+                      <span className="block text-slate-800">
                         {getKoreanWeekdayLabel(date)}
                       </span>
-                      <span className="mt-0.5 block text-zinc-500">
+                      <span className="mt-0.5 block text-slate-500">
                         {date.slice(5)}
                       </span>
                     </th>
@@ -357,8 +357,8 @@ export function AvailabilityOverview({
               </thead>
               <tbody>
                 {hours.map((hour) => (
-                  <tr className="align-top odd:bg-white even:bg-zinc-50/60" key={hour}>
-                    <td className="sticky left-0 z-10 border-b border-zinc-100 bg-inherit px-3 py-2 font-medium text-zinc-700">
+                  <tr className="align-top odd:bg-white even:bg-slate-50/60" key={hour}>
+                    <td className="sticky left-0 z-10 border-b border-slate-100 bg-inherit px-3 py-2 font-medium text-slate-700">
                       {displayHour(hour)}
                     </td>
                     {dates.map((date) => {
@@ -366,7 +366,7 @@ export function AvailabilityOverview({
                       if (!slot) {
                         return (
                           <td
-                            className="border-b border-zinc-100 px-3 py-2 text-zinc-400"
+                            className="border-b border-slate-100 px-3 py-2 text-slate-400"
                             key={date}
                           >
                             -
@@ -411,12 +411,12 @@ export function AvailabilityOverview({
             </table>
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
+          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-sm text-slate-500">
             앞으로 남은 가능 시간 현황이 없습니다.
           </div>
         )}
         {detailSlots.length > 0 ? (
-          <details className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <details className="rounded-md border border-slate-200/90 bg-slate-50/80 p-3">
             <summary className="cursor-pointer text-sm font-semibold text-slate-800">
               상세 명단 보기
             </summary>

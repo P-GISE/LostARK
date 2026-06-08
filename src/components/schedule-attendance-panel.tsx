@@ -60,8 +60,8 @@ export function ScheduleAttendancePanel({
   const currentStatus = currentAttendance?.status ?? "PENDING";
 
   return (
-    <section className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-4 py-3">
+    <section className="mt-6 rounded-lg border border-slate-200/90 bg-white shadow-sm shadow-slate-200/70">
+      <div className="border-b border-slate-200/80 bg-slate-50/70 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-slate-950">일정 참석 체크</h2>
           <Badge tone={statusTone(currentStatus)}>
@@ -95,11 +95,11 @@ export function ScheduleAttendancePanel({
         </form>
 
         {attendances.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-sm text-slate-500">
             아직 참석 체크한 공대원이 없습니다.
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 rounded-lg border border-slate-100">
+          <div className="divide-y divide-slate-100 rounded-md border border-slate-200/80 bg-white">
             {attendances.map((attendance) => (
               <div
                 className="flex flex-col gap-2 px-3 py-3 first:pt-3 last:pb-3 sm:flex-row sm:items-center sm:justify-between"

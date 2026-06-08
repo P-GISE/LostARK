@@ -90,8 +90,9 @@ export default async function SettingsPage() {
             name="name"
             required
           />
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
+              className="h-4 w-4 accent-teal-700"
               defaultChecked={member.group.inviteEnabled}
               name="inviteEnabled"
               type="checkbox"
@@ -108,7 +109,7 @@ export default async function SettingsPage() {
         className="mt-6"
         title="초대 링크"
       >
-        <p className="min-h-10 break-all rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
+        <p className="min-h-10 break-all rounded-md border border-slate-200/90 bg-slate-50/80 p-3 text-sm text-slate-700">
           {inviteUrl}
         </p>
         <form action={rotateInvite} className="mt-3 flex flex-wrap gap-2">

@@ -25,7 +25,7 @@ const labels: Record<Status, string> = {
 
 const statusClasses: Record<Status, string> = {
   AVAILABLE: "border-emerald-300 bg-emerald-50 text-emerald-800",
-  UNAVAILABLE: "border-rose-300 bg-rose-50 text-rose-800",
+  UNAVAILABLE: "border-rose-200 bg-rose-50/70 text-rose-700",
   TENTATIVE: "border-amber-300 bg-amber-50 text-amber-800",
 };
 
@@ -286,9 +286,9 @@ export function AvailabilityGrid({
       onPointerLeave={stopPainting}
       onPointerUp={stopPainting}
     >
-      <div className="grid gap-4 rounded-md border border-zinc-200 bg-white p-3">
+      <div className="grid gap-4 rounded-md border border-slate-200/90 bg-white p-3 shadow-sm shadow-slate-200/70">
         <div className="grid gap-2">
-          <div className="text-xs font-semibold text-zinc-500">상태</div>
+          <div className="text-xs font-semibold text-slate-500">상태</div>
           <div className="flex flex-wrap gap-2">
           {modeOptions.map((option) => (
             <button
@@ -296,7 +296,7 @@ export function AvailabilityGrid({
               className={`h-9 rounded-md border px-3 text-sm font-medium transition ${
                 selectedStatus === option.status
                   ? option.className
-                  : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50"
+                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
               }`}
               key={option.label}
               onClick={() => setSelectedStatus(option.status)}
@@ -306,7 +306,7 @@ export function AvailabilityGrid({
             </button>
           ))}
           {isPending ? (
-            <span className="inline-flex h-9 items-center text-sm text-zinc-500">
+            <span className="inline-flex h-9 items-center text-sm text-slate-500">
               저장 중
             </span>
           ) : null}
@@ -315,16 +315,16 @@ export function AvailabilityGrid({
         <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
           <div className="grid gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-zinc-500">요일</span>
+              <span className="text-xs font-semibold text-slate-500">요일</span>
               <button
-                className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                className="h-8 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                 onClick={() => selectDaySet("all")}
                 type="button"
               >
                 전체
               </button>
               <button
-                className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                className="h-8 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                 onClick={() => selectDaySet("weekday")}
                 type="button"
               >
@@ -332,7 +332,7 @@ export function AvailabilityGrid({
               </button>
               {weekendDays.length > 0 ? (
                 <button
-                  className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  className="h-8 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                   onClick={() => selectDaySet("weekend")}
                   type="button"
                 >
@@ -340,7 +340,7 @@ export function AvailabilityGrid({
                 </button>
               ) : null}
               <button
-                className="h-8 rounded-md border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                className="h-8 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                 onClick={() => selectDaySet("none")}
                 type="button"
               >
@@ -356,10 +356,10 @@ export function AvailabilityGrid({
                     aria-pressed={selected}
                     className={`h-9 rounded-md border px-3 text-sm font-medium transition ${
                       disabled
-                        ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
+                        ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
                         : selected
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                     disabled={disabled}
                     key={day.date}
@@ -373,10 +373,10 @@ export function AvailabilityGrid({
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-[8.5rem_8.5rem_auto] sm:items-end">
-            <label className="grid gap-1 text-sm font-medium text-zinc-700">
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
               시작 시간
               <select
-                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
                 onChange={(event) => setRangeStartHour(Number(event.target.value))}
                 value={rangeStartHour}
               >
@@ -387,10 +387,10 @@ export function AvailabilityGrid({
                 ))}
               </select>
             </label>
-            <label className="grid gap-1 text-sm font-medium text-zinc-700">
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
               끝 시간
               <select
-                className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
                 onChange={(event) => setRangeEndHour(Number(event.target.value))}
                 value={rangeEndHour}
               >
@@ -402,7 +402,7 @@ export function AvailabilityGrid({
               </select>
             </label>
             <button
-              className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:bg-zinc-300"
+              className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:bg-slate-300"
               disabled={!canApplyRange}
               onClick={applySelectedRange}
               type="button"
@@ -413,21 +413,21 @@ export function AvailabilityGrid({
         </div>
       </div>
       <div
-        className="grid gap-1 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 p-2 select-none sm:gap-2 sm:p-3"
+        className="grid gap-1 overflow-x-auto rounded-md border border-slate-200/90 bg-slate-50 p-2 shadow-sm shadow-slate-200/70 select-none sm:gap-2 sm:p-3"
         style={{
           gridTemplateColumns: `4.75rem repeat(${visibleDays.length}, minmax(5.75rem, 1fr))`,
         }}
       >
-        <div className="sticky left-0 z-20 bg-zinc-50 text-xs font-medium text-zinc-500">
+        <div className="sticky left-0 z-20 bg-slate-50 text-xs font-medium text-slate-500">
           시간
         </div>
         {visibleDays.map((day) => (
           <div
-            className="sticky top-0 z-10 rounded bg-zinc-50 px-1 text-xs font-medium text-zinc-600"
+            className="sticky top-0 z-10 rounded bg-slate-50 px-1 text-xs font-medium text-slate-600"
             key={day.date}
           >
             <div>{day.label}</div>
-            <div className="mt-0.5 text-zinc-400">{day.date.slice(5)}</div>
+            <div className="mt-0.5 text-slate-400">{day.date.slice(5)}</div>
           </div>
         ))}
         {visibleHours.map((hour) => {
@@ -439,10 +439,10 @@ export function AvailabilityGrid({
           <Fragment key={hour}>
             <button
               aria-label={`${displayHour(hour)} 전체 입력`}
-              className={`sticky left-0 z-10 flex min-h-11 items-center rounded border border-transparent bg-zinc-50 px-1 text-left text-sm font-medium transition sm:min-h-12 ${
+              className={`sticky left-0 z-10 flex min-h-11 items-center rounded border border-transparent bg-slate-50 px-1 text-left text-sm font-medium transition sm:min-h-12 ${
                 isHourDisabled
-                  ? "cursor-not-allowed text-zinc-300"
-                  : "text-zinc-600 hover:border-zinc-300 hover:bg-white"
+                  ? "cursor-not-allowed text-slate-300"
+                  : "text-slate-600 hover:border-slate-300 hover:bg-white"
               }`}
               disabled={isHourDisabled}
               onClick={() => applyHours([hour])}
@@ -471,7 +471,7 @@ export function AvailabilityGrid({
                   aria-label={`${day.label} ${displayHour(hour)} ${cellLabel(
                     cellStatus ?? null,
                   )}`}
-                  className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-zinc-50 sm:min-h-12 sm:px-3 ${statusClasses[displayStatus]}`}
+                  className={`min-h-11 rounded-md border px-2 py-1.5 text-left text-sm transition hover:bg-slate-50 sm:min-h-12 sm:px-3 ${statusClasses[displayStatus]}`}
                   key={key}
                   onClick={() => handleClick(day, hour)}
                   onPointerDown={() => startPainting(day, hour)}

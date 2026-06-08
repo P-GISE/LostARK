@@ -11,7 +11,7 @@ import {
 } from "@/server/admin";
 
 const cleanupButtonClassName =
-  "inline-flex h-8 items-center justify-center rounded-md border border-rose-200 bg-white px-3 text-xs font-medium text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400";
+  "inline-flex h-8 items-center justify-center rounded-md border border-rose-200 bg-white px-3 text-xs font-medium text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -31,9 +31,7 @@ export default async function AdminPage() {
 
   async function removeGroup(formData: FormData) {
     "use server";
-    const currentAdmin = await requireAdminUser();
     await deleteAdminGroup({
-      adminEmail: currentAdmin.email,
       groupId: String(formData.get("groupId") ?? ""),
     });
     revalidatePath("/admin");
@@ -41,9 +39,7 @@ export default async function AdminPage() {
 
   async function removeUser(formData: FormData) {
     "use server";
-    const currentAdmin = await requireAdminUser();
     await deleteAdminUser({
-      adminEmail: currentAdmin.email,
       userId: String(formData.get("userId") ?? ""),
     });
     revalidatePath("/admin");
@@ -51,9 +47,7 @@ export default async function AdminPage() {
 
   async function removeSchedule(formData: FormData) {
     "use server";
-    const currentAdmin = await requireAdminUser();
     await deleteAdminSchedule({
-      adminEmail: currentAdmin.email,
       scheduleId: String(formData.get("scheduleId") ?? ""),
     });
     revalidatePath("/admin");
@@ -80,7 +74,7 @@ export default async function AdminPage() {
         <SectionPanel title="공대 목록" description="최근 수정된 공대 50개">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs font-semibold text-zinc-500">
+              <thead className="border-b border-slate-200 text-xs font-semibold text-slate-500">
                 <tr>
                   <th className="py-2 pr-3">공대</th>
                   <th className="px-3 py-2">리더</th>
@@ -91,17 +85,17 @@ export default async function AdminPage() {
                   <th className="py-2 pl-3 text-right">정리</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-slate-100">
                 {overview.groups.map((group) => (
                   <tr key={group.id}>
-                    <td className="py-2 pr-3 font-medium text-zinc-950">{group.name}</td>
-                    <td className="px-3 py-2 text-zinc-600">{joinOrDash(group.leaderNames)}</td>
-                    <td className="px-3 py-2 text-right text-zinc-700">{group.memberCount}</td>
-                    <td className="px-3 py-2 text-right text-zinc-700">{group.scheduleCount}</td>
-                    <td className="px-3 py-2 text-zinc-600">
+                    <td className="py-2 pr-3 font-medium text-slate-950">{group.name}</td>
+                    <td className="px-3 py-2 text-slate-600">{joinOrDash(group.leaderNames)}</td>
+                    <td className="px-3 py-2 text-right text-slate-700">{group.memberCount}</td>
+                    <td className="px-3 py-2 text-right text-slate-700">{group.scheduleCount}</td>
+                    <td className="px-3 py-2 text-slate-600">
                       {group.inviteEnabled ? "활성" : "비활성"}
                     </td>
-                    <td className="px-3 py-2 text-zinc-500">{formatDate(group.updatedAt)}</td>
+                    <td className="px-3 py-2 text-slate-500">{formatDate(group.updatedAt)}</td>
                     <td className="py-2 pl-3 text-right">
                       <form action={removeGroup}>
                         <input name="groupId" type="hidden" value={group.id} />
@@ -123,7 +117,7 @@ export default async function AdminPage() {
         <SectionPanel title="로그인 유저" description="최근 가입한 유저 50명">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs font-semibold text-zinc-500">
+              <thead className="border-b border-slate-200 text-xs font-semibold text-slate-500">
                 <tr>
                   <th className="py-2 pr-3">이름</th>
                   <th className="px-3 py-2">이메일</th>
@@ -133,16 +127,16 @@ export default async function AdminPage() {
                   <th className="py-2 pl-3 text-right">정리</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-slate-100">
                 {overview.users.map((user) => (
                   <tr key={user.id}>
-                    <td className="py-2 pr-3 font-medium text-zinc-950">{user.displayName}</td>
-                    <td className="px-3 py-2 text-zinc-600">{user.email}</td>
-                    <td className="px-3 py-2 text-right text-zinc-700">
+                    <td className="py-2 pr-3 font-medium text-slate-950">{user.displayName}</td>
+                    <td className="px-3 py-2 text-slate-600">{user.email}</td>
+                    <td className="px-3 py-2 text-right text-slate-700">
                       {user.membershipCount}
                     </td>
-                    <td className="px-3 py-2 text-zinc-600">{joinOrDash(user.groupNames)}</td>
-                    <td className="px-3 py-2 text-zinc-500">{formatDate(user.createdAt)}</td>
+                    <td className="px-3 py-2 text-slate-600">{joinOrDash(user.groupNames)}</td>
+                    <td className="px-3 py-2 text-slate-500">{formatDate(user.createdAt)}</td>
                     <td className="py-2 pl-3 text-right">
                       <form action={removeUser}>
                         <input name="userId" type="hidden" value={user.id} />
@@ -165,7 +159,7 @@ export default async function AdminPage() {
         <SectionPanel title="최근 일정" description="최근 시작일 기준 일정 20개">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs font-semibold text-zinc-500">
+              <thead className="border-b border-slate-200 text-xs font-semibold text-slate-500">
                 <tr>
                   <th className="py-2 pr-3">일정</th>
                   <th className="px-3 py-2">공대</th>
@@ -174,13 +168,13 @@ export default async function AdminPage() {
                   <th className="py-2 pl-3 text-right">정리</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-slate-100">
                 {overview.schedules.map((schedule) => (
                   <tr key={schedule.id}>
-                    <td className="py-2 pr-3 font-medium text-zinc-950">{schedule.title}</td>
-                    <td className="px-3 py-2 text-zinc-600">{schedule.groupName}</td>
-                    <td className="px-3 py-2 text-zinc-600">{schedule.status}</td>
-                    <td className="px-3 py-2 text-zinc-500">{formatDate(schedule.startsAt)}</td>
+                    <td className="py-2 pr-3 font-medium text-slate-950">{schedule.title}</td>
+                    <td className="px-3 py-2 text-slate-600">{schedule.groupName}</td>
+                    <td className="px-3 py-2 text-slate-600">{schedule.status}</td>
+                    <td className="px-3 py-2 text-slate-500">{formatDate(schedule.startsAt)}</td>
                     <td className="py-2 pl-3 text-right">
                       <form action={removeSchedule}>
                         <input name="scheduleId" type="hidden" value={schedule.id} />

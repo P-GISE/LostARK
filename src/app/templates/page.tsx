@@ -151,15 +151,15 @@ export default async function TemplatesPage() {
               title="로아 기본 템플릿"
             >
               <div className="grid gap-3 text-sm text-slate-600">
-                <div className="rounded-md bg-slate-50 p-3">
+                <div className="rounded-md border border-slate-200/80 bg-slate-50/80 p-3">
                   <div className="font-semibold text-slate-950">4인 레이드</div>
                   <div className="mt-1">딜러 3 / 서폿 1</div>
                 </div>
-                <div className="rounded-md bg-slate-50 p-3">
+                <div className="rounded-md border border-slate-200/80 bg-slate-50/80 p-3">
                   <div className="font-semibold text-slate-950">8인 레이드</div>
                   <div className="mt-1">딜러 6 / 서폿 2</div>
                 </div>
-                <div className="rounded-md bg-slate-50 p-3">
+                <div className="rounded-md border border-slate-200/80 bg-slate-50/80 p-3">
                   <div className="font-semibold text-slate-950">16인 레이드</div>
                   <div className="mt-1">딜러 12 / 서폿 4</div>
                 </div>

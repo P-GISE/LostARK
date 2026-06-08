@@ -102,7 +102,7 @@ export default async function NotificationsPage() {
               <Badge tone="success">{`발송 성공 ${statusCounts.SENT ?? 0}`}</Badge>
               <Badge tone="danger">{`실패 ${statusCounts.FAILED ?? 0}`}</Badge>
             </div>
-            <div className="divide-y divide-zinc-100">
+            <div className="divide-y divide-slate-100">
               {jobs.map((job) => (
                 <div className="py-3 first:pt-0 last:pb-0" key={job.id}>
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

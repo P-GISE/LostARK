@@ -77,12 +77,6 @@ function getConfiguredSessionSecret() {
     return sessionSecret;
   }
 
-  const databaseUrl =
-    process.env.DATABASE_URL?.trim() ?? readLocalEnvValue("DATABASE_URL");
-  if (process.env.NODE_ENV === "production" && databaseUrl) {
-    return `lostark-party-session:${databaseUrl}`;
-  }
-
   return null;
 }
 

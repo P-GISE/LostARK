@@ -108,7 +108,7 @@ export function TemplatePicker({
           </span>
         </div>
       ) : null}
-      <div className="max-h-72 overflow-y-auto rounded-md border border-slate-200 bg-white">
+      <div className="max-h-72 overflow-y-auto rounded-md border border-slate-200/90 bg-white shadow-sm shadow-slate-200/60">
         {visibleGroups.length === 0 ? (
           <div className="p-3 text-sm text-slate-500">
             검색 결과가 없습니다.
@@ -152,8 +152,8 @@ export function TemplatePicker({
                         className={cx(
                           "flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-xs font-medium transition",
                           selected
-                            ? "border-cyan-200 bg-cyan-50 text-cyan-900"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900",
+                            ? "border-teal-200 bg-teal-50 text-teal-900"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-900",
                         )}
                         key={template.id}
                         onClick={() => setSelectedTemplateId(template.id)}

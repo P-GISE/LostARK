@@ -53,9 +53,9 @@ function RecommendationCard({
   slot: RecommendedScheduleSlot;
 }) {
   return (
-    <label className="grid cursor-pointer gap-2 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50">
+    <label className="grid cursor-pointer gap-2 rounded-md border border-slate-200/90 bg-white p-3 text-sm shadow-sm shadow-slate-200/70 transition hover:border-teal-300 hover:bg-teal-50">
       <input
-        className="h-4 w-4 accent-cyan-700"
+        className="h-4 w-4 accent-teal-700"
         defaultChecked={checked}
         name="startsAt"
         required
@@ -221,7 +221,7 @@ export default async function SchedulesPage({
               title="과반수 가능 시간이 없습니다."
             />
           )}
-          <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <details className="mt-4 rounded-md border border-slate-200/90 bg-slate-50/80 p-3">
             <summary className="cursor-pointer text-sm font-semibold text-slate-700">
               직접 시간 입력
             </summary>
@@ -281,7 +281,7 @@ export default async function SchedulesPage({
                   <div className="text-sm text-slate-600">
                     {schedule.startsAt.toLocaleString("ko-KR")}
                   </div>
-                  <div className="text-sm font-medium text-cyan-800">
+                  <div className="text-sm font-medium text-teal-800">
                     빈자리 {openSlots}
                   </div>
                 </Link>

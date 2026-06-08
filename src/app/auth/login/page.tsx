@@ -35,10 +35,10 @@ export default async function LoginPage({ searchParams }: AuthPageProps) {
     <main className={narrowPageShellClassName}>
       <SectionPanel className={narrowContentClassName} title="로그인">
         <LoginForm nextPath={nextPath} />
-        <p className="mt-4 text-sm text-zinc-600">
+        <p className="mt-4 text-sm text-slate-600">
           계정이 없다면{" "}
           <Link
-            className="font-medium text-zinc-950 underline"
+            className="font-medium text-slate-950 underline decoration-slate-300 underline-offset-4 transition hover:text-teal-800"
             href={`/auth/signup${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`}
           >
             회원가입

@@ -53,14 +53,14 @@ describe("auth context session values", () => {
     expect(verifySessionValue("payload.signature")).toBeNull();
   });
 
-  it("can use DATABASE_URL as a production fallback until SESSION_SECRET is configured", () => {
+  it("does not reuse DATABASE_URL as a production session signing secret", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("SESSION_SECRET", "");
     vi.stubEnv("DATABASE_URL", "postgresql://user:password@localhost/app");
 
-    const signed = signSessionValue("member-1");
-
-    expect(verifySessionValue(signed)).toBe("member-1");
+    expect(() => signSessionValue("member-1")).toThrow(
+      "SESSION_SECRET environment variable is required.",
+    );
   });
 
   it("redirects missing member sessions to login for protected pages", async () => {
