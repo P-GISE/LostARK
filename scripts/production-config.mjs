@@ -21,6 +21,7 @@ const REQUIRED_KEYS = [
 ];
 
 const LOCAL_DATABASE_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const ENABLED_FLAG_VALUES = new Set(["1", "true", "yes", "on"]);
 
 export function parseEnvContent(content) {
   const values = {};
@@ -91,6 +92,10 @@ function databaseHost(databaseUrl, errors) {
   }
 }
 
+function enabledFlag(value) {
+  return ENABLED_FLAG_VALUES.has((value ?? "").trim().toLowerCase());
+}
+
 export function validateProductionEnv(envFile, options) {
   const role = options?.role;
   const errors = [];
@@ -130,9 +135,13 @@ export function validateProductionEnv(envFile, options) {
 
   if (env.DATABASE_URL) {
     const host = databaseHost(env.DATABASE_URL, errors);
-    if (role === "pc" && LOCAL_DATABASE_HOSTS.has(host)) {
+    if (
+      role === "pc" &&
+      LOCAL_DATABASE_HOSTS.has(host) &&
+      !enabledFlag(env.PC_ALLOW_LOCAL_DATABASE)
+    ) {
       errors.push(
-        "PC production DATABASE_URL must point at the shared server database, not localhost.",
+        "PC production DATABASE_URL must point at the shared server database unless PC_ALLOW_LOCAL_DATABASE=true is set.",
       );
     }
     if (role === "pc" && host === "postgres") {

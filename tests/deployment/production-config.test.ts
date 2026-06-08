@@ -47,7 +47,7 @@ describe("production config validator", () => {
     });
   });
 
-  it("rejects PC production config that still points at localhost", () => {
+  it("rejects PC production config that points at localhost without an explicit local database flag", () => {
     const envFile = writeEnv({
       ...shared,
       DATABASE_URL:
@@ -57,8 +57,22 @@ describe("production config validator", () => {
     expect(validateProductionEnv(envFile, { role: "pc" })).toEqual({
       ok: false,
       errors: [
-        "PC production DATABASE_URL must point at the shared server database, not localhost.",
+        "PC production DATABASE_URL must point at the shared server database unless PC_ALLOW_LOCAL_DATABASE=true is set.",
       ],
+    });
+  });
+
+  it("accepts PC production config that explicitly uses the local database", () => {
+    const envFile = writeEnv({
+      ...shared,
+      PC_ALLOW_LOCAL_DATABASE: "true",
+      DATABASE_URL:
+        "postgresql://lostark:secret@127.0.0.1:5432/lostark_party",
+    });
+
+    expect(validateProductionEnv(envFile, { role: "pc" })).toEqual({
+      ok: true,
+      errors: [],
     });
   });
 
