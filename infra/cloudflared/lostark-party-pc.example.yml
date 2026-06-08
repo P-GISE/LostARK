@@ -1,0 +1,14 @@
+tunnel: pc-tunnel-id
+credentials-file: /etc/cloudflared/lostark-party-pc.json
+loglevel: info
+
+ingress:
+  - hostname: lostark-party.pigs0516.com
+    service: http://127.0.0.1:3001
+  - hostname: pigs0516.com
+    service: http://127.0.0.1:3001
+  - hostname: www.pigs0516.com
+    service: http://127.0.0.1:3001
+  - hostname: pc.pigs0516.com
+    service: http://127.0.0.1:3001
+  - service: http_status:404

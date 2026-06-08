@@ -1,0 +1,14 @@
+tunnel: aws-tunnel-id
+credentials-file: /etc/cloudflared/lostark-party-aws.json
+loglevel: info
+
+ingress:
+  - hostname: lostark-party.pigs0516.com
+    service: http://127.0.0.1:3000
+  - hostname: pigs0516.com
+    service: http://127.0.0.1:3000
+  - hostname: www.pigs0516.com
+    service: http://127.0.0.1:3000
+  - hostname: aws.pigs0516.com
+    service: http://127.0.0.1:3000
+  - service: http_status:404
