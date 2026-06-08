@@ -15,6 +15,21 @@ env_value() {
   grep -E "^${key}=" "${ENV_FILE}" | tail -n 1 | cut -d= -f2-
 }
 
+docker_compose() {
+  if docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1 && sudo -n docker compose version >/dev/null 2>&1; then
+    sudo -n docker compose "$@"
+    return
+  fi
+
+  echo "Docker Compose is not available to this user. Grant docker access or passwordless sudo for docker." >&2
+  exit 1
+}
+
 require_env() {
   local key="$1"
   local value
@@ -43,5 +58,5 @@ if [ "$(env_value "POSTGRES_PASSWORD")" = "lostark" ]; then
   exit 1
 fi
 
-docker compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" up -d --build
-docker compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" ps
+docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" up -d --build
+docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" ps
