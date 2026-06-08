@@ -56,6 +56,16 @@ if ($nodeCommand) {
   exit 1
 }
 
+$configCheck = Join-Path $projectRoot "scripts\production-config.mjs"
+if (-not $env:SKIP_PRODUCTION_CONFIG_CHECK) {
+  & $node $configCheck "--role" "pc" "--env-file" ".env"
+  if ($LASTEXITCODE -ne 0) {
+    "Production config check failed." |
+      Out-File -LiteralPath $errLog -Append -Encoding utf8
+    exit $LASTEXITCODE
+  }
+}
+
 $nextCli = "node_modules\next\dist\bin\next"
 $nextCliPath = Join-Path $projectRoot $nextCli
 if (-not (Test-Path -LiteralPath $nextCliPath)) {

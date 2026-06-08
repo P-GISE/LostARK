@@ -26,6 +26,14 @@ describe("VPS helper scripts", () => {
     );
   });
 
+  it("checks server production env before deploying compose", () => {
+    const script = read("scripts/vps-deploy.sh");
+
+    expect(script).toContain("node scripts/production-config.mjs");
+    expect(script).toContain("--role server");
+    expect(script).toContain("--env-file \"${ENV_FILE}\"");
+  });
+
   it("publishes the local web port through Tailscale Serve", () => {
     const script = read("scripts/vps-tailscale-serve.sh");
 
