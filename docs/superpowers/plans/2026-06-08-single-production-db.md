@@ -501,8 +501,8 @@ Add this test inside the existing `describe` block:
     expect(pcEnv).toContain(
       "DISCORD_REDIRECT_URI=https://lostark-party.pigs0516.com/api/discord/oauth/callback",
     );
-    expect(pcEnv).toContain("DATABASE_URL=postgresql://lostark:");
-    expect(pcEnv).toContain("@100.64.0.10:5432/lostark_party");
+    expect(pcEnv).toContain("DATABASE_URL=");
+    expect(pcEnv).toContain("server-private-ip");
   });
 ```
 
@@ -534,7 +534,7 @@ Replace `.env.vps.example` with:
 ```text
 POSTGRES_PASSWORD=
 POSTGRES_HOST_BIND=127.0.0.1
-DATABASE_URL=postgresql://lostark:${POSTGRES_PASSWORD}@postgres:5432/lostark_party
+DATABASE_URL=
 APP_BASE_URL=https://lostark-party.pigs0516.com
 APP_DOMAIN=lostark-party.pigs0516.com
 SESSION_COOKIE_NAME=lostark_party_member
@@ -555,7 +555,9 @@ CHARACTER_SYNC_GROUP_ID=
 Create `.env.pc-production.example` with:
 
 ```text
-DATABASE_URL=postgresql://lostark:database-password@100.64.0.10:5432/lostark_party
+# DATABASE_URL shape:
+# postgresql://lostark:server-db-password@server-private-ip:5432/lostark_party
+DATABASE_URL=
 APP_BASE_URL=https://lostark-party.pigs0516.com
 APP_DOMAIN=lostark-party.pigs0516.com
 SESSION_COOKIE_NAME=lostark_party_member
