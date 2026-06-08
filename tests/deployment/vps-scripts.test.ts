@@ -23,7 +23,9 @@ describe("VPS helper scripts", () => {
     expect(script).toContain("replace-with");
     expect(script).toContain("docker info");
     expect(script).toContain("sudo -n docker info");
-    expect(script).toContain("sudo -n docker compose");
+    expect(script).toContain('sudo -n docker "$@"');
+    expect(script).toContain('docker_cli compose "$@"');
+    expect(script).toContain("docker_cli builder prune -af");
     expect(script).toContain(
       "docker_compose -f docker-compose.vps.yml --env-file \"${ENV_FILE}\" up -d --build",
     );

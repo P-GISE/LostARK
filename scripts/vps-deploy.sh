@@ -15,19 +15,23 @@ env_value() {
   grep -E "^${key}=" "${ENV_FILE}" | tail -n 1 | cut -d= -f2-
 }
 
-docker_compose() {
+docker_cli() {
   if docker info >/dev/null 2>&1; then
-    docker compose "$@"
+    docker "$@"
     return
   fi
 
   if command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
-    sudo -n docker compose "$@"
+    sudo -n docker "$@"
     return
   fi
 
-  echo "Docker Compose is not available to this user. Grant docker access or passwordless sudo for docker." >&2
+  echo "Docker is not available to this user. Grant docker access or passwordless sudo for docker." >&2
   exit 1
+}
+
+docker_compose() {
+  docker_cli compose "$@"
 }
 
 require_env() {
@@ -57,6 +61,9 @@ if [ "$(env_value "POSTGRES_PASSWORD")" = "lostark" ]; then
   echo "POSTGRES_PASSWORD must not use the old default password." >&2
   exit 1
 fi
+
+echo "Pruning Docker build cache before rebuild..."
+docker_cli builder prune -af
 
 docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" up -d --build
 docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" ps
