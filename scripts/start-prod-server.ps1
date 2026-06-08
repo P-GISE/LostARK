@@ -57,8 +57,9 @@ if ($nodeCommand) {
 }
 
 $configCheck = Join-Path $projectRoot "scripts\production-config.mjs"
+$envFile = Join-Path $projectRoot ".env"
 if (-not $env:SKIP_PRODUCTION_CONFIG_CHECK) {
-  & $node $configCheck "--role" "pc" "--env-file" ".env"
+  & $node $configCheck "--role" "pc" "--env-file" $envFile
   if ($LASTEXITCODE -ne 0) {
     "Production config check failed." |
       Out-File -LiteralPath $errLog -Append -Encoding utf8

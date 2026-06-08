@@ -8,6 +8,8 @@ describe("PC production startup config", () => {
     expect(script).toContain("production-config.mjs");
     expect(script).toContain("--role");
     expect(script).toContain("pc");
+    expect(script).toContain("$envFile = Join-Path $projectRoot \".env\"");
+    expect(script).toContain("\"--env-file\" $envFile");
     expect(script).toContain("SKIP_PRODUCTION_CONFIG_CHECK");
   });
 });
