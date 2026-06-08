@@ -31,7 +31,7 @@ describe("GitHub Actions VPS deployment workflow", () => {
 
   it("normalizes production env on the VPS before deploy", () => {
     expect(workflow).toContain('SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"');
-    expect(workflow).toContain("node scripts/normalize-production-env.mjs");
+    expect(workflow).toContain("bash scripts/run-node-script.sh scripts/normalize-production-env.mjs");
     expect(workflow).toContain("--postgres-host-bind");
     expect(workflow).toContain('"${SERVER_PRIVATE_IP}"');
   });

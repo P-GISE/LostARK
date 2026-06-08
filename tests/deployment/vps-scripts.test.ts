@@ -29,9 +29,19 @@ describe("VPS helper scripts", () => {
   it("checks server production env before deploying compose", () => {
     const script = read("scripts/vps-deploy.sh");
 
-    expect(script).toContain("node scripts/production-config.mjs");
+    expect(script).toContain("bash scripts/run-node-script.sh");
+    expect(script).toContain("scripts/production-config.mjs");
     expect(script).toContain("--role server");
     expect(script).toContain("--env-file \"${ENV_FILE}\"");
+  });
+
+  it("runs Node scripts through Docker when host Node is unavailable", () => {
+    const script = read("scripts/run-node-script.sh");
+
+    expect(script).toContain("command -v node");
+    expect(script).toContain("docker run --rm");
+    expect(script).toContain("node:24-alpine");
+    expect(script).toContain("node \"$@\"");
   });
 
   it("publishes the local web port through Tailscale Serve", () => {

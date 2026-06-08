@@ -36,7 +36,7 @@ require_env "DATABASE_URL"
 require_env "APP_BASE_URL"
 require_env "SESSION_SECRET"
 
-node scripts/production-config.mjs --role server --env-file "${ENV_FILE}"
+bash scripts/run-node-script.sh scripts/production-config.mjs --role server --env-file "${ENV_FILE}"
 
 if [ "$(env_value "POSTGRES_PASSWORD")" = "lostark" ]; then
   echo "POSTGRES_PASSWORD must not use the old default password." >&2
