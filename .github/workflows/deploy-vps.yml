@@ -75,5 +75,7 @@ jobs:
             cd "${{ secrets.VPS_APP_DIR }}"
             git fetch origin main
             git reset --hard origin/main
+            SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"
+            node scripts/normalize-production-env.mjs --env-file .env --postgres-host-bind "${SERVER_PRIVATE_IP}"
             bash scripts/vps-deploy.sh
             bash scripts/vps-tailscale-serve.sh
