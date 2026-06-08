@@ -16,12 +16,12 @@ env_value() {
 }
 
 docker_compose() {
-  if docker compose version >/dev/null 2>&1; then
+  if docker info >/dev/null 2>&1; then
     docker compose "$@"
     return
   fi
 
-  if command -v sudo >/dev/null 2>&1 && sudo -n docker compose version >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
     sudo -n docker compose "$@"
     return
   fi

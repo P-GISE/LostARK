@@ -21,6 +21,8 @@ describe("VPS helper scripts", () => {
     expect(script).toContain("POSTGRES_PASSWORD");
     expect(script).toContain("SESSION_SECRET");
     expect(script).toContain("replace-with");
+    expect(script).toContain("docker info");
+    expect(script).toContain("sudo -n docker info");
     expect(script).toContain("sudo -n docker compose");
     expect(script).toContain(
       "docker_compose -f docker-compose.vps.yml --env-file \"${ENV_FILE}\" up -d --build",
