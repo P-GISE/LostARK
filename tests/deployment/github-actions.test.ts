@@ -18,6 +18,9 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("postgres:");
     expect(workflow).toContain("postgres:17-alpine");
     expect(workflow).toContain("DATABASE_URL:");
+    expect(workflow).toContain(
+      "DISCORD_REDIRECT_URI: http://localhost:3000/api/discord/oauth/callback",
+    );
     expect(workflow).toContain("npx prisma migrate deploy");
   });
 

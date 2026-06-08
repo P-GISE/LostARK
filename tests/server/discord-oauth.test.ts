@@ -43,6 +43,13 @@ describe("discord oauth", () => {
   });
 
   it("rejects unsigned or expired OAuth state values", () => {
+    vi.stubEnv("DISCORD_CLIENT_ID", "client-id");
+    vi.stubEnv("DISCORD_CLIENT_SECRET", "client-secret");
+    vi.stubEnv(
+      "DISCORD_REDIRECT_URI",
+      "https://example.com/api/discord/oauth/callback",
+    );
+
     expect(parseDiscordOAuthState("member-1")).toBeNull();
 
     const url = getDiscordAuthorizeUrl(
