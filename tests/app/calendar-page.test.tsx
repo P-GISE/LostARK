@@ -23,7 +23,15 @@ vi.mock("@/components/availability-grid", () => ({
 }));
 
 vi.mock("@/components/availability-overview", () => ({
-  AvailabilityOverview: () => <div data-testid="availability-overview" />,
+  AvailabilityOverview: ({
+    slots,
+  }: {
+    readonly slots: ReadonlyArray<unknown>;
+  }) => (
+    <div data-testid="availability-overview">
+      {`overview slots ${slots.length}`}
+    </div>
+  ),
 }));
 
 vi.mock("@/server/auth-context", () => ({
@@ -82,6 +90,35 @@ describe("CalendarPage", () => {
     expect(
       inputSection?.compareDocumentPosition(overview),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("shows group availability overview for logged-in regular members", async () => {
+    mocks.requireCurrentMember.mockResolvedValue({
+      groupId: "group-1",
+      id: "member-1",
+      role: "MEMBER",
+    });
+    mocks.getGroupAvailabilityOverview.mockResolvedValue([
+      {
+        availableMembers: ["공대원"],
+        date: "2030-06-12",
+        hour: 20,
+        missingMembers: [],
+        tentativeMembers: [],
+        unavailableMembers: [],
+      },
+    ]);
+
+    render(await CalendarPage());
+
+    expect(mocks.getGroupAvailabilityOverview).toHaveBeenCalledWith({
+      dates: expect.any(Array),
+      groupId: "group-1",
+      hours: expect.any(Array),
+    });
+    expect(screen.getByTestId("availability-overview")).toHaveTextContent(
+      "overview slots 1",
+    );
   });
 
   it("shows upcoming schedules on the calendar page", async () => {

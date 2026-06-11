@@ -87,14 +87,11 @@ export default async function CalendarPage() {
   const rangeStart = kstSlotDate(days[0].date, DAY_START_HOUR);
   const rangeEnd = kstSlotDate(days[days.length - 1].date, DAY_END_HOUR);
   const blocks = await listAvailabilityForMember(member.id, rangeStart, rangeEnd);
-  const groupOverview =
-    member.role === "LEADER"
-      ? await getGroupAvailabilityOverview({
-          groupId: member.groupId,
-          dates: days.map((day) => day.date),
-          hours: availabilityHours,
-        })
-      : [];
+  const groupOverview = await getGroupAvailabilityOverview({
+    groupId: member.groupId,
+    dates: days.map((day) => day.date),
+    hours: availabilityHours,
+  });
   const initialStatuses = Object.fromEntries(
     blocks.map((block) => [statusKey(block), block.status]),
   ) as Record<string, Status>;
@@ -194,11 +191,9 @@ export default async function CalendarPage() {
           onChange={saveCells}
         />
       </SectionPanel>
-      {member.role === "LEADER" ? (
-        <div className="mt-6">
-          <AvailabilityOverview slots={groupOverview} />
-        </div>
-      ) : null}
+      <div className="mt-6">
+        <AvailabilityOverview slots={groupOverview} />
+      </div>
     </main>
   );
 }
