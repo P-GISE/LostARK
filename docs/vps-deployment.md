@@ -10,7 +10,7 @@ The default deployment path is Docker Compose plus Tailscale Serve.
 - SSH access with a sudo user
 - Tailscale account access
 - Discord OAuth redirect set to:
-  `https://lostark-party.tail408126.ts.net/api/discord/oauth/callback`
+  `https://lostark-party.pigs0516.com/api/discord/oauth/callback`
 
 ## First Server Setup
 
@@ -32,9 +32,10 @@ Without an auth key, the script prints the manual command:
 sudo tailscale up --ssh --hostname "lostark-party"
 ```
 
-To keep the existing URL `https://lostark-party.tail408126.ts.net`, the VPS
-must own the Tailscale hostname `lostark-party`. Rename or remove the old local
-PC node from Tailscale if the name is already taken.
+Use Tailscale for SSH, deployment, and private database access. The production
+public app settings should stay on `https://lostark-party.pigs0516.com`; do not
+set `APP_BASE_URL`, `APP_DOMAIN`, or `DISCORD_REDIRECT_URI` to the tailnet host
+unless the deployment is intentionally private-only.
 
 ## Environment
 
@@ -48,8 +49,9 @@ Set these values before deploying:
 
 - `POSTGRES_PASSWORD`: random long database password
 - `DATABASE_URL`: use the same password in the URL
-- `APP_BASE_URL`: `https://lostark-party.tail408126.ts.net`
-- `APP_DOMAIN`: `lostark-party.tail408126.ts.net`
+- `APP_BASE_URL`: `https://lostark-party.pigs0516.com`
+- `APP_DOMAIN`: `lostark-party.pigs0516.com`
+- `DISCORD_REDIRECT_URI`: `https://lostark-party.pigs0516.com/api/discord/oauth/callback`
 - `SESSION_SECRET`: random long session signing secret
 - `ADMIN_EMAILS`: admin login email list
 - Discord and Lost Ark API secrets as needed
@@ -75,7 +77,7 @@ Verify:
 
 ```bash
 curl -I http://127.0.0.1:3000/
-curl -I https://lostark-party.tail408126.ts.net/
+curl -I https://lostark-party.pigs0516.com/
 docker compose -f docker-compose.vps.yml ps
 tailscale serve status
 ```
@@ -112,4 +114,5 @@ internet. If a real public domain is connected to the VPS, run Caddy explicitly:
 docker compose -f docker-compose.vps.yml --profile public up -d caddy
 ```
 
-Keep using the default Tailscale path if the site should stay tailnet-only.
+The production config checker expects the public `lostark-party.pigs0516.com`
+values. Keep a tailnet-only URL only for an intentionally private deployment.

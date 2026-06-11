@@ -100,6 +100,25 @@ describe("AppShell", () => {
     render(await AppShell({ children: <main>본문</main> }));
 
     expect(screen.queryByRole("link", { name: "가능 시간" })).not.toBeInTheDocument();
+    const publicNav = within(
+      screen.getByRole("navigation", { name: "공개 메뉴" }),
+    );
+    expect(publicNav.getByRole("link", { name: "소개" })).toHaveAttribute(
+      "href",
+      "/about",
+    );
+    expect(publicNav.getByRole("link", { name: "일정 가이드" })).toHaveAttribute(
+      "href",
+      "/guides/raid-schedule",
+    );
+    expect(publicNav.getByRole("link", { name: "개인정보" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+    expect(publicNav.getByRole("link", { name: "문의" })).toHaveAttribute(
+      "href",
+      "/contact",
+    );
     expect(screen.getByRole("link", { name: "회원가입" })).toHaveAttribute(
       "href",
       "/auth/signup",

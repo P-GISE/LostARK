@@ -29,7 +29,7 @@ describe("HomePage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "공대 일정과 캐릭터를 한 화면에서 관리합니다",
+        name: "로스트아크 고정 공대 운영을 한곳에서 정리합니다",
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "회원가입" })).toHaveAttribute(
@@ -39,6 +39,10 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: "로그인" })).toHaveAttribute(
       "href",
       "/auth/login",
+    );
+    expect(screen.getByRole("link", { name: "일정 조율 가이드 보기" })).toHaveAttribute(
+      "href",
+      "/guides/raid-schedule",
     );
     expect(screen.queryByRole("link", { name: "로컬 초대 링크 열기" })).not.toBeInTheDocument();
   });

@@ -29,6 +29,14 @@ Parameters:
   PublicWwwHost:
     Type: String
     Default: pigs0516.com
+  MinecraftPublicHost:
+    Type: String
+    Default: mc.pigs0516.com
+  MinecraftAwsIp:
+    Type: String
+  MinecraftPort:
+    Type: String
+    Default: "25565"
   ScheduleExpression:
     Type: String
     Default: rate(5 minutes)
@@ -79,6 +87,9 @@ Resources:
           BACKUP_URL: !Ref BackupUrl
           PUBLIC_HOST: !Ref PublicHost
           PUBLIC_WWW_HOST: !Ref PublicWwwHost
+          MINECRAFT_PUBLIC_HOST: !Ref MinecraftPublicHost
+          MINECRAFT_AWS_IP: !Ref MinecraftAwsIp
+          MINECRAFT_PORT: !Ref MinecraftPort
           EC2_INSTANCE_ID: !Ref Ec2InstanceId
           CLOUDFLARE_ZONE_ID: !Ref CloudflareZoneId
           CLOUDFLARE_ACCOUNT_ID: !Ref CloudflareAccountId
@@ -88,7 +99,7 @@ Resources:
           CLOUDFLARE_API_TOKEN: !Ref CloudflareApiToken
       Code:
         ZipFile: |
-          import json, os, urllib.error, urllib.request, boto3
+          import ipaddress, json, os, socket, urllib.error, urllib.parse, urllib.request, boto3
           ec2 = boto3.client("ec2")
           def env(n):
               v = os.environ.get(n)
@@ -116,26 +127,60 @@ Resources:
               payload = {"type": "CNAME", "name": host, "content": target, "proxied": True, "ttl": 1}
               if records: cf("PUT", f"/zones/{zid}/dns_records/{records[0]['id']}", payload)
               else: cf("POST", f"/zones/{zid}/dns_records", payload)
-          def pc_tunnel_healthy():
+          def arecord(host, ip_address):
+              zid = env("CLOUDFLARE_ZONE_ID")
+              records = cf("GET", f"/zones/{zid}/dns_records?name={urllib.parse.quote(host, safe='')}")
+              payload = {"type": "A", "name": host, "content": ip_address, "proxied": False, "ttl": 1}
+              if records: cf("PUT", f"/zones/{zid}/dns_records/{records[0]['id']}", payload)
+              else: cf("POST", f"/zones/{zid}/dns_records", payload)
+          def pc_state():
               try:
                   tunnel = cf("GET", f"/accounts/{env('CLOUDFLARE_ACCOUNT_ID')}/cfd_tunnel/{env('PC_TUNNEL_ID')}")
-                  return tunnel.get("status") == "healthy" and len(tunnel.get("connections", [])) > 0
+                  healthy = tunnel.get("status") == "healthy" and len(tunnel.get("connections", [])) > 0
+                  for c in tunnel.get("connections", []):
+                      origin_ip = c.get("origin_ip")
+                      if origin_ip:
+                          try:
+                              ipaddress.ip_address(origin_ip)
+                              return healthy, origin_ip
+                          except ValueError:
+                              pass
+                  return healthy, None
               except Exception:
-                  return healthy(env("PRIMARY_URL"))
+                  return healthy(env("PRIMARY_URL")), None
+          def is_tcp_open(host, port):
+              try:
+                  with socket.create_connection((host, int(port)), timeout=5):
+                      return True
+              except Exception:
+                  return False
           def handler(event, context):
               instance_id = env("EC2_INSTANCE_ID")
               state = ec2.describe_instances(InstanceIds=[instance_id])["Reservations"][0]["Instances"][0]["State"]["Name"]
-              if pc_tunnel_healthy():
+              primary_ok, pc_origin_ip = pc_state()
+              minecraft_target = None
+              pc_minecraft_ok = primary_ok and pc_origin_ip and is_tcp_open(pc_origin_ip, env("MINECRAFT_PORT"))
+              if primary_ok:
                   target, action = env("PC_TUNNEL_TARGET"), "primary"
-                  if state in {"pending", "running"}:
+                  if pc_minecraft_ok:
+                      minecraft_target = pc_origin_ip
+                      arecord(env("MINECRAFT_PUBLIC_HOST"), pc_origin_ip)
+                  else:
+                      minecraft_target = env("MINECRAFT_AWS_IP")
+                      arecord(env("MINECRAFT_PUBLIC_HOST"), minecraft_target)
+                  if pc_minecraft_ok and state in {"pending", "running"}:
                       ec2.stop_instances(InstanceIds=[instance_id]); action = "primary-stop-backup"
+                  elif not pc_minecraft_ok and state in {"stopped", "stopping"}:
+                      ec2.start_instances(InstanceIds=[instance_id]); action = "primary-web-backup-minecraft-start"
               else:
                   target, action = env("AWS_TUNNEL_TARGET"), "backup"
+                  minecraft_target = env("MINECRAFT_AWS_IP")
+                  arecord(env("MINECRAFT_PUBLIC_HOST"), minecraft_target)
                   if state in {"stopped", "stopping"}:
                       ec2.start_instances(InstanceIds=[instance_id]); action = "backup-start"
               cname(env("PUBLIC_HOST"), target)
               if os.environ.get("PUBLIC_WWW_HOST"): cname(os.environ["PUBLIC_WWW_HOST"], target)
-              return {"statusCode": 200, "body": json.dumps({"action": action, "target": target, "instanceStateBeforeAction": state})}
+              return {"statusCode": 200, "body": json.dumps({"action": action, "target": target, "minecraftTarget": minecraft_target, "pcMinecraftHealthy": bool(pc_minecraft_ok), "instanceStateBeforeAction": state})}
 
   FailoverSchedule:
     Type: AWS::Events::Rule

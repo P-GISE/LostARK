@@ -1,5 +1,8 @@
 import json
 import os
+import ipaddress
+import socket
+import urllib.parse
 import urllib.error
 import urllib.request
 
@@ -71,15 +74,62 @@ def set_cname(host, target):
         cf_request("POST", f"/zones/{zone_id}/dns_records", payload)
 
 
-def is_pc_tunnel_healthy():
+def set_a_record(host, ip_address):
+    zone_id = env("CLOUDFLARE_ZONE_ID")
+    encoded_host = urllib.parse.quote(host, safe="")
+    records = cf_request("GET", f"/zones/{zone_id}/dns_records?name={encoded_host}")
+    payload = {
+        "type": "A",
+        "name": host,
+        "content": ip_address,
+        "proxied": False,
+        "ttl": 1,
+    }
+
+    if records:
+        cf_request("PUT", f"/zones/{zone_id}/dns_records/{records[0]['id']}", payload)
+    else:
+        cf_request("POST", f"/zones/{zone_id}/dns_records", payload)
+
+
+def get_pc_tunnel():
+    return cf_request(
+        "GET",
+        f"/accounts/{env('CLOUDFLARE_ACCOUNT_ID')}/cfd_tunnel/{env('PC_TUNNEL_ID')}",
+    )
+
+
+def is_pc_tunnel_healthy(tunnel):
+    return tunnel.get("status") == "healthy" and len(tunnel.get("connections", [])) > 0
+
+
+def pc_tunnel_origin_ip(tunnel):
+    for connection in tunnel.get("connections", []):
+        origin_ip = connection.get("origin_ip")
+        if not origin_ip:
+            continue
+        try:
+            ipaddress.ip_address(origin_ip)
+            return origin_ip
+        except ValueError:
+            continue
+    return None
+
+
+def pc_primary_state():
     try:
-        tunnel = cf_request(
-            "GET",
-            f"/accounts/{env('CLOUDFLARE_ACCOUNT_ID')}/cfd_tunnel/{env('PC_TUNNEL_ID')}",
-        )
-        return tunnel.get("status") == "healthy" and len(tunnel.get("connections", [])) > 0
+        tunnel = get_pc_tunnel()
+        return is_pc_tunnel_healthy(tunnel), pc_tunnel_origin_ip(tunnel)
     except Exception:
-        return is_healthy(env("PRIMARY_URL"))
+        return is_healthy(env("PRIMARY_URL")), None
+
+
+def is_tcp_open(host, port):
+    try:
+        with socket.create_connection((host, int(port)), timeout=5):
+            return True
+    except Exception:
+        return False
 
 
 def instance_state(instance_id):
@@ -88,20 +138,34 @@ def instance_state(instance_id):
 
 
 def handler(event, context):
-    primary_ok = is_pc_tunnel_healthy()
+    primary_ok, pc_origin_ip = pc_primary_state()
     backup_url = env("BACKUP_URL")
     instance_id = env("EC2_INSTANCE_ID")
     state = instance_state(instance_id)
+    minecraft_target = None
+    minecraft_port = env("MINECRAFT_PORT")
+    pc_minecraft_ok = primary_ok and pc_origin_ip and is_tcp_open(pc_origin_ip, minecraft_port)
 
     if primary_ok:
         target = env("PC_TUNNEL_TARGET")
         action = "primary"
-        if state in {"pending", "running"}:
+        if pc_minecraft_ok:
+            minecraft_target = pc_origin_ip
+            set_a_record(env("MINECRAFT_PUBLIC_HOST"), pc_origin_ip)
+        else:
+            minecraft_target = env("MINECRAFT_AWS_IP")
+            set_a_record(env("MINECRAFT_PUBLIC_HOST"), minecraft_target)
+        if pc_minecraft_ok and state in {"pending", "running"}:
             ec2.stop_instances(InstanceIds=[instance_id])
             action = "primary-stop-backup"
+        elif not pc_minecraft_ok and state in {"stopped", "stopping"}:
+            ec2.start_instances(InstanceIds=[instance_id])
+            action = "primary-web-backup-minecraft-start"
     else:
         target = env("AWS_TUNNEL_TARGET")
         action = "backup"
+        minecraft_target = env("MINECRAFT_AWS_IP")
+        set_a_record(env("MINECRAFT_PUBLIC_HOST"), minecraft_target)
         if state in {"stopped", "stopping"}:
             ec2.start_instances(InstanceIds=[instance_id])
             action = "backup-start"
@@ -119,6 +183,8 @@ def handler(event, context):
                 "instanceStateBeforeAction": state,
                 "action": action,
                 "target": target,
+                "minecraftTarget": minecraft_target,
+                "pcMinecraftHealthy": bool(pc_minecraft_ok),
                 "backupUrl": backup_url,
             }
         ),

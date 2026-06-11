@@ -21,6 +21,13 @@ const secondaryNavItems: AppNavItem[] = [
   { href: "/notifications", label: "알림" },
 ];
 
+const publicNavItems: AppNavItem[] = [
+  { href: "/about", label: "소개" },
+  { href: "/guides/raid-schedule", label: "일정 가이드" },
+  { href: "/privacy", label: "개인정보" },
+  { href: "/contact", label: "문의" },
+];
+
 function AccountMenu({
   groupName,
   secondaryItems,
@@ -112,29 +119,40 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 />
               </>
             ) : (
-              <nav className="ml-auto flex items-center gap-2 text-sm text-slate-600">
-                {user ? (
-                  <>
-                    <Link className={secondaryButtonClassName} href="/groups/new">
-                      새 공대 만들기
-                    </Link>
-                    <form action={logoutAction}>
-                      <button className={mutedButtonClassName}>
-                        로그아웃
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <>
-                    <Link className={mutedButtonClassName} href="/auth/login">
-                      로그인
-                    </Link>
-                    <Link className={secondaryButtonClassName} href="/auth/signup">
-                      회원가입
-                    </Link>
-                  </>
-                )}
-              </nav>
+              <>
+                <nav
+                  aria-label="공개 메뉴"
+                  className="order-3 flex w-full items-center gap-1 overflow-x-auto sm:order-none sm:ml-4 sm:w-auto"
+                >
+                  <AppNavLinks items={publicNavItems} />
+                </nav>
+                <nav
+                  aria-label="인증 메뉴"
+                  className="ml-auto flex items-center gap-2 text-sm text-slate-600"
+                >
+                  {user ? (
+                    <>
+                      <Link className={secondaryButtonClassName} href="/groups/new">
+                        새 공대 만들기
+                      </Link>
+                      <form action={logoutAction}>
+                        <button className={mutedButtonClassName}>
+                          로그아웃
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <>
+                      <Link className={mutedButtonClassName} href="/auth/login">
+                        로그인
+                      </Link>
+                      <Link className={secondaryButtonClassName} href="/auth/signup">
+                        회원가입
+                      </Link>
+                    </>
+                  )}
+                </nav>
+              </>
             )}
           </div>
         </div>

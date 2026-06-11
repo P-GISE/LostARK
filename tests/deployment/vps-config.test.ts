@@ -47,6 +47,12 @@ describe("VPS deployment config", () => {
     );
   });
 
+  it("copies public static files into the runner image", () => {
+    const dockerfile = read("Dockerfile");
+
+    expect(dockerfile).toContain("COPY --from=builder /app/public ./public");
+  });
+
   it("keeps public Caddy exposure behind an explicit compose profile", () => {
     const compose = read("docker-compose.vps.yml");
 
@@ -73,5 +79,13 @@ describe("VPS deployment config", () => {
     );
     expect(pcEnv).toContain("DATABASE_URL=");
     expect(pcEnv).toContain("server-private-ip");
+  });
+
+  it("keeps the VPS deployment guide aligned with canonical production hosts", () => {
+    const guide = read("docs/vps-deployment.md");
+
+    expect(guide).toContain("https://lostark-party.pigs0516.com");
+    expect(guide).toContain("APP_DOMAIN`: `lostark-party.pigs0516.com");
+    expect(guide).not.toContain("lostark-party.tail408126.ts.net");
   });
 });

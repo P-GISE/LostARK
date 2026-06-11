@@ -19,6 +19,12 @@ describe("AWS failover deployment artifacts", () => {
     expect(lambda).toContain("200 <= response.status < 400");
     expect(lambda).toContain("start_instances");
     expect(lambda).toContain("stop_instances");
+    expect(lambda).toContain("MINECRAFT_PUBLIC_HOST");
+    expect(lambda).toContain("MINECRAFT_AWS_IP");
+    expect(lambda).toContain("MINECRAFT_PORT");
+    expect(lambda).toContain("origin_ip");
+    expect(lambda).toContain("set_a_record");
+    expect(lambda).toContain("is_tcp_open");
   });
 
   it("creates a scheduled Lambda with the minimum failover permissions", () => {
@@ -36,6 +42,10 @@ describe("AWS failover deployment artifacts", () => {
     expect(template).toContain("PC_TUNNEL_ID");
     expect(template).toContain("Default: lostark-party.pigs0516.com");
     expect(template).toContain("Default: pigs0516.com");
+    expect(template).toContain("MinecraftPublicHost");
+    expect(template).toContain("Default: mc.pigs0516.com");
+    expect(template).toContain("MinecraftAwsIp");
+    expect(template).toContain("MinecraftPort");
   });
 
   it("does not commit live cloud or tunnel identifiers as template defaults", () => {
