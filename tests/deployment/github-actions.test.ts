@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const workflow = readFileSync(".github/workflows/deploy-vps.yml", "utf8");
+const bootstrapWorkflow = readFileSync(
+  ".github/workflows/bootstrap-aws.yml",
+  "utf8",
+);
 
 describe("GitHub Actions VPS deployment workflow", () => {
   it("deploys main branch pushes to the VPS over Tailscale SSH", () => {
@@ -81,5 +85,28 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("bash scripts/run-node-script.sh scripts/normalize-production-env.mjs");
     expect(workflow).toContain("--postgres-host-bind");
     expect(workflow).toContain('"${SERVER_PRIVATE_IP}"');
+  });
+});
+
+describe("GitHub Actions AWS bootstrap workflow", () => {
+  it("bootstraps a replacement AWS host through public SSH and joins Tailscale", () => {
+    expect(bootstrapWorkflow).toContain("name: Bootstrap AWS Backup");
+    expect(bootstrapWorkflow).toContain("workflow_dispatch:");
+    expect(bootstrapWorkflow).toContain("AWS_BOOTSTRAP_HOST");
+    expect(bootstrapWorkflow).toContain("AWS_BOOTSTRAP_USER");
+    expect(bootstrapWorkflow).toContain("AWS_BOOTSTRAP_SSH_KEY");
+    expect(bootstrapWorkflow).toContain("AWS_ENV_FILE");
+    expect(bootstrapWorkflow).toContain("AWS_CLOUDFLARED_TOKEN");
+    expect(bootstrapWorkflow).toContain("TS_AUTHKEY");
+    expect(bootstrapWorkflow).toContain(
+      'ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true',
+    );
+    expect(bootstrapWorkflow).toContain("StrictHostKeyChecking=accept-new");
+    expect(bootstrapWorkflow).toContain('TAILSCALE_HOSTNAME="lostark-party-aws"');
+    expect(bootstrapWorkflow).toContain("scripts/vps-bootstrap.sh");
+    expect(bootstrapWorkflow).toContain("scripts/vps-deploy.sh");
+    expect(bootstrapWorkflow).toContain("cloudflared service install");
+    expect(bootstrapWorkflow).toContain("curl --connect-timeout 2 --max-time 10 -fsSI http://127.0.0.1:3000/");
+    expect(bootstrapWorkflow).not.toContain("set -x");
   });
 });

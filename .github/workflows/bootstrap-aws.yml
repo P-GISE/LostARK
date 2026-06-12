@@ -1,0 +1,123 @@
+name: Bootstrap AWS Backup
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: bootstrap-aws
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate bootstrap secrets
+        env:
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
+          AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
+          AWS_ENV_FILE: ${{ secrets.AWS_ENV_FILE }}
+          AWS_CLOUDFLARED_TOKEN: ${{ secrets.AWS_CLOUDFLARED_TOKEN }}
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
+        run: |
+          missing=0
+          for key in AWS_BOOTSTRAP_HOST AWS_BOOTSTRAP_USER AWS_BOOTSTRAP_SSH_KEY AWS_ENV_FILE AWS_CLOUDFLARED_TOKEN TS_AUTHKEY; do
+            if [ -z "${!key}" ]; then
+              echo "::error title=Missing bootstrap secret::${key} is not configured"
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      - name: Prepare SSH
+        env:
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${AWS_BOOTSTRAP_SSH_KEY}" > ~/.ssh/aws-bootstrap.pem
+          chmod 600 ~/.ssh/aws-bootstrap.pem
+          ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true
+
+      - name: Wait for SSH
+        env:
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
+        run: |
+          for attempt in $(seq 1 30); do
+            if ssh -i ~/.ssh/aws-bootstrap.pem -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" "true"; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq 30 ]; then
+              echo "::error title=AWS SSH unavailable::Timed out waiting for SSH"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Copy production env
+        env:
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
+          AWS_ENV_FILE: ${{ secrets.AWS_ENV_FILE }}
+        run: |
+          printf '%s' "${AWS_ENV_FILE}" > aws.env
+          scp -i ~/.ssh/aws-bootstrap.pem -o StrictHostKeyChecking=accept-new aws.env "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}:/tmp/lostark-party.env"
+          rm -f aws.env
+
+      - name: Bootstrap and deploy AWS host
+        env:
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
+          AWS_CLOUDFLARED_TOKEN: ${{ secrets.AWS_CLOUDFLARED_TOKEN }}
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
+        run: |
+          ssh -i ~/.ssh/aws-bootstrap.pem -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
+            "AWS_CLOUDFLARED_TOKEN='${AWS_CLOUDFLARED_TOKEN}' TS_AUTHKEY='${TS_AUTHKEY}' bash -s" <<'REMOTE'
+              set -euo pipefail
+              sudo apt-get update
+              sudo apt-get install -y ca-certificates curl git
+
+              if [ ! -d /opt/lostark-party/.git ]; then
+                sudo rm -rf /opt/lostark-party
+                sudo git clone https://github.com/P-GISE/LostARK.git /opt/lostark-party
+              fi
+
+              sudo git config --global --add safe.directory /opt/lostark-party || true
+              sudo git -C /opt/lostark-party fetch origin main
+              sudo git -C /opt/lostark-party reset --hard origin/main
+              sudo install -m 600 -o root -g root /tmp/lostark-party.env /opt/lostark-party/.env
+              rm -f /tmp/lostark-party.env
+
+              sudo env TAILSCALE_AUTHKEY="${TS_AUTHKEY}" TAILSCALE_HOSTNAME="lostark-party-aws" bash /opt/lostark-party/scripts/vps-bootstrap.sh
+
+              if ! command -v cloudflared >/dev/null 2>&1; then
+                curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+                sudo dpkg -i /tmp/cloudflared.deb
+                rm -f /tmp/cloudflared.deb
+              fi
+
+              if ! systemctl is-enabled --quiet cloudflared 2>/dev/null; then
+                sudo cloudflared service install "${AWS_CLOUDFLARED_TOKEN}"
+              fi
+
+              cd /opt/lostark-party
+              SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"
+              sudo bash scripts/run-node-script.sh scripts/normalize-production-env.mjs --env-file .env --postgres-host-bind "${SERVER_PRIVATE_IP}"
+              sudo env COMPOSE_BAKE=false bash scripts/vps-deploy.sh
+
+              for attempt in $(seq 1 24); do
+                if curl --connect-timeout 2 --max-time 10 -fsSI http://127.0.0.1:3000/ >/dev/null; then
+                  break
+                fi
+                if [ "${attempt}" -eq 24 ]; then
+                  echo "AWS web health check failed after ${attempt} attempts" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              sudo systemctl enable cloudflared
+              sudo systemctl restart cloudflared
+              tailscale ip -4
+          REMOTE
