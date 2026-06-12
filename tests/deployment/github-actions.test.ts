@@ -34,6 +34,29 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("bash scripts/vps-tailscale-serve.sh");
   });
 
+  it("can manually deploy the same app image to the AWS backup host", () => {
+    expect(workflow).toContain("target:");
+    expect(workflow).toContain("description: Server target to deploy");
+    expect(workflow).toContain("default: vps");
+    expect(workflow).toContain("- vps");
+    expect(workflow).toContain("- aws");
+    expect(workflow).toContain("- all");
+    expect(workflow).toContain("deploy-aws:");
+    expect(workflow).toContain(
+      "${{ github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all' }}",
+    );
+    expect(workflow).toContain("Validate AWS deploy secrets");
+    expect(workflow).toContain("Missing AWS deploy secret");
+    expect(workflow).toContain("Skipping AWS deploy");
+    expect(workflow).toContain("AWS_HOST: ${{ secrets.AWS_HOST }}");
+    expect(workflow).toContain("AWS_USER: ${{ secrets.AWS_USER }}");
+    expect(workflow).toContain("AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}");
+    expect(workflow).toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
+    expect(workflow).toContain('cd "${AWS_APP_DIR}"');
+    expect(workflow).toContain("COMPOSE_BAKE=false bash scripts/vps-deploy.sh");
+    expect(workflow).toContain("sudo -n systemctl restart cloudflared");
+  });
+
   it("normalizes production env on the VPS before deploy", () => {
     expect(workflow).toContain('SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"');
     expect(workflow).toContain("bash scripts/run-node-script.sh scripts/normalize-production-env.mjs");

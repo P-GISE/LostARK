@@ -235,6 +235,12 @@ production database, see:
 docs/operations/single-production-db-cutover.md
 ```
 
+For GitHub Actions deployment to the VPS and AWS backup host, see:
+
+```text
+docs/vps-deployment.md
+```
+
 ## Scripts
 
 ```powershell

@@ -103,6 +103,23 @@ npm run build
 tailscale ssh "$VPS_USER@$VPS_HOST"
 ```
 
+To deploy the AWS backup host through the same workflow, set these additional
+repository secrets:
+
+- `AWS_HOST`: AWS EC2 Tailscale IP address or MagicDNS name
+- `AWS_USER`: AWS EC2 Tailscale SSH user, for example `ubuntu`
+- `AWS_APP_DIR`: repository path on the AWS EC2 host, for example `/opt/lostark-party`
+
+When all AWS secrets are present, every push to `main` deploys the same Docker
+Compose app image to AWS after the test job. If an AWS secret is missing, push
+deployments keep the VPS deployment active and skip AWS with a warning. Manual
+workflow runs can choose `target=aws` or `target=all`; missing AWS secrets fail
+manual AWS deployments instead of silently skipping them.
+
+The AWS deployment uses the same repository reset, production env normalization,
+and `scripts/vps-deploy.sh` path as the VPS. After the app is updated, it
+restarts `cloudflared` so the AWS tunnel serves `https://aws.pigs0516.com/`.
+
 ## Public Domain Option
 
 The default VPS compose file does not expose ports 80/443 to the public
