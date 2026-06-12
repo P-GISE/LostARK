@@ -97,8 +97,13 @@ jobs:
                 rm -f /tmp/cloudflared.deb
               fi
 
-              if ! systemctl is-enabled --quiet cloudflared 2>/dev/null; then
-                sudo cloudflared service install "${AWS_CLOUDFLARED_TOKEN}"
+              if ! systemctl list-unit-files cloudflared.service >/dev/null 2>&1; then
+                sudo cloudflared service install "${AWS_CLOUDFLARED_TOKEN}" || true
+              fi
+
+              if ! systemctl list-unit-files cloudflared.service >/dev/null 2>&1; then
+                echo "cloudflared service was not installed" >&2
+                exit 1
               fi
 
               cd /opt/lostark-party
@@ -118,6 +123,17 @@ jobs:
               done
 
               sudo systemctl enable cloudflared
-              sudo systemctl restart cloudflared
+              sudo systemctl restart cloudflared || true
+              for attempt in $(seq 1 12); do
+                if systemctl is-active --quiet cloudflared; then
+                  break
+                fi
+                if [ "${attempt}" -eq 12 ]; then
+                  sudo journalctl -u cloudflared -n 80 --no-pager >&2 || true
+                  echo "cloudflared did not become active" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
               tailscale ip -4
           REMOTE

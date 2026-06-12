@@ -106,6 +106,10 @@ describe("GitHub Actions AWS bootstrap workflow", () => {
     expect(bootstrapWorkflow).toContain("scripts/vps-bootstrap.sh");
     expect(bootstrapWorkflow).toContain("scripts/vps-deploy.sh");
     expect(bootstrapWorkflow).toContain("cloudflared service install");
+    expect(bootstrapWorkflow).toContain(
+      "cloudflared service was not installed",
+    );
+    expect(bootstrapWorkflow).toContain("systemctl is-active --quiet cloudflared");
     expect(bootstrapWorkflow).toContain("curl --connect-timeout 2 --max-time 10 -fsSI http://127.0.0.1:3000/");
     expect(bootstrapWorkflow).not.toContain("set -x");
   });
