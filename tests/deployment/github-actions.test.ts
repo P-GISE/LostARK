@@ -13,6 +13,11 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("secrets.TS_AUTHKEY");
     expect(workflow).toContain("secrets.VPS_HOST");
     expect(workflow).toContain("secrets.VPS_USER");
+    expect(workflow).not.toContain("ping: ${{ secrets.VPS_HOST }}");
+    expect(workflow).toContain("Check VPS host reachability");
+    expect(workflow).toContain('tailscale ping --c 1 --timeout 5s "${VPS_HOST}"');
+    expect(workflow).toContain("VPS host did not respond on the tailnet");
+    expect(workflow).toContain("steps.vps-host.outputs.reachable == 'true'");
     expect(workflow).toContain('tailscale ssh "${VPS_USER}@${VPS_HOST}"');
     expect(workflow).not.toContain("appleboy/ssh-action");
     expect(workflow).not.toContain("secrets.VPS_SSH_KEY");
@@ -52,6 +57,13 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("AWS_HOST: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("AWS_USER: ${{ secrets.AWS_USER }}");
     expect(workflow).toContain("AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}");
+    expect(workflow).not.toContain("ping: ${{ secrets.AWS_HOST }}");
+    expect(workflow).toContain("Check AWS host reachability");
+    expect(workflow).toContain('tailscale ping --c 1 --timeout 5s "${AWS_HOST}"');
+    expect(workflow).toContain("AWS host did not respond on the tailnet");
+    expect(workflow).toContain(
+      "steps.aws-host.outputs.reachable == 'true'",
+    );
     expect(workflow).toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
     expect(workflow).toContain('cd "${AWS_APP_DIR}"');
     expect(workflow).toContain("COMPOSE_BAKE=false bash scripts/vps-deploy.sh");

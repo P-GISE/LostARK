@@ -95,9 +95,27 @@ jobs:
         uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
-          ping: ${{ secrets.VPS_HOST }}
+
+      - name: Check VPS host reachability
+        id: vps-host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if tailscale ping --c 1 --timeout 5s "${VPS_HOST}"; then
+            echo "reachable=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "::error title=VPS host offline::VPS host did not respond on the tailnet"
+            exit 1
+          fi
+
+          echo "::warning title=Skipping VPS deploy::VPS host did not respond on the tailnet"
+          echo "reachable=false" >> "${GITHUB_OUTPUT}"
 
       - name: Deploy on VPS
+        if: ${{ steps.vps-host.outputs.reachable == 'true' }}
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -155,10 +173,28 @@ jobs:
         uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
-          ping: ${{ secrets.AWS_HOST }}
+
+      - name: Check AWS host reachability
+        id: aws-host
+        if: ${{ steps.aws-secrets.outputs.configured == 'true' }}
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+        run: |
+          if tailscale ping --c 1 --timeout 5s "${AWS_HOST}"; then
+            echo "reachable=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "::error title=AWS host offline::AWS host did not respond on the tailnet"
+            exit 1
+          fi
+
+          echo "::warning title=Skipping AWS deploy::AWS host did not respond on the tailnet"
+          echo "reachable=false" >> "${GITHUB_OUTPUT}"
 
       - name: Deploy on AWS backup
-        if: ${{ steps.aws-secrets.outputs.configured == 'true' }}
+        if: ${{ steps.aws-host.outputs.reachable == 'true' }}
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
