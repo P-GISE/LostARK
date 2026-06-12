@@ -10,6 +10,6 @@ if [ "$(id -u)" -eq 0 ]; then
   tailscale serve --bg 3000
   tailscale serve status
 else
-  sudo tailscale serve --bg 3000
-  sudo tailscale serve status
+  sudo -n tailscale serve --bg 3000
+  sudo -n tailscale serve status
 fi

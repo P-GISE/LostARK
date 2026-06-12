@@ -55,5 +55,7 @@ describe("VPS helper scripts", () => {
 
     expect(script).toContain("tailscale serve --bg 3000");
     expect(script).toContain("tailscale serve status");
+    expect(script).toContain("sudo -n tailscale serve --bg 3000");
+    expect(script).toContain("sudo -n tailscale serve status");
   });
 });
