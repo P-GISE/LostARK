@@ -173,7 +173,16 @@ jobs:
             SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"
             bash scripts/run-node-script.sh scripts/normalize-production-env.mjs --env-file .env --postgres-host-bind "${SERVER_PRIVATE_IP}"
             COMPOSE_BAKE=false bash scripts/vps-deploy.sh
+            for attempt in $(seq 1 24); do
+              if curl --connect-timeout 2 --max-time 10 -fsSI http://127.0.0.1:3000/ >/dev/null; then
+                break
+              fi
+              if [ "${attempt}" -eq 24 ]; then
+                echo "AWS web health check failed after ${attempt} attempts" >&2
+                exit 1
+              fi
+              sleep 5
+            done
             sudo -n systemctl enable cloudflared
             sudo -n systemctl restart cloudflared
-            curl -fsSI http://127.0.0.1:3000/ >/dev/null
           REMOTE

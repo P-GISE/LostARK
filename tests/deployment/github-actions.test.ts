@@ -54,6 +54,12 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
     expect(workflow).toContain('cd "${AWS_APP_DIR}"');
     expect(workflow).toContain("COMPOSE_BAKE=false bash scripts/vps-deploy.sh");
+    expect(workflow).toContain("for attempt in $(seq 1 24); do");
+    expect(workflow).toContain(
+      "curl --connect-timeout 2 --max-time 10 -fsSI http://127.0.0.1:3000/",
+    );
+    expect(workflow).toContain("AWS web health check failed");
+    expect(workflow).toContain("sleep 5");
     expect(workflow).toContain("sudo -n systemctl restart cloudflared");
   });
 
