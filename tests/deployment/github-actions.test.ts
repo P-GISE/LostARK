@@ -42,8 +42,9 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("- aws");
     expect(workflow).toContain("- all");
     expect(workflow).toContain("deploy-aws:");
+    expect(workflow).toContain("needs: [test, deploy]");
     expect(workflow).toContain(
-      "${{ github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all' }}",
+      "${{ always() && needs.test.result == 'success' && (github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all') && (github.event_name != 'push' || needs.deploy.result == 'success') }}",
     );
     expect(workflow).toContain("Validate AWS deploy secrets");
     expect(workflow).toContain("Missing AWS deploy secret");

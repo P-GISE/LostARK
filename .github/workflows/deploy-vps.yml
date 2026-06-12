@@ -116,9 +116,9 @@ jobs:
           REMOTE
 
   deploy-aws:
-    needs: test
+    needs: [test, deploy]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all' }}
+    if: ${{ always() && needs.test.result == 'success' && (github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all') && (github.event_name != 'push' || needs.deploy.result == 'success') }}
     steps:
       - name: Validate AWS deploy secrets
         id: aws-secrets
