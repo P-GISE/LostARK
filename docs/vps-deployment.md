@@ -89,10 +89,9 @@ then SSH into the VPS to deploy the newest `main` branch.
 
 Set these repository secrets in GitHub:
 
-- `VPS_HOST`: VPS IP address or DNS name
-- `VPS_USER`: SSH user, for example `ubuntu`
-- `VPS_SSH_KEY`: private SSH key that can access the VPS
-- `VPS_SSH_PORT`: optional SSH port, usually `22`
+- `TS_AUTHKEY`: reusable Tailscale auth key with access to the tailnet
+- `VPS_HOST`: VPS Tailscale IP address or MagicDNS name
+- `VPS_USER`: Tailscale SSH user, for example `ubuntu`
 - `VPS_APP_DIR`: repository path on the VPS, for example `/opt/lostark-party`
 
 After that, every push to `main` runs:
@@ -101,8 +100,7 @@ After that, every push to `main` runs:
 npm test
 npm run lint
 npm run build
-bash scripts/vps-deploy.sh
-bash scripts/vps-tailscale-serve.sh
+tailscale ssh "$VPS_USER@$VPS_HOST"
 ```
 
 ## Public Domain Option

@@ -6,6 +6,7 @@ output/
 coverage/
 test-results/
 playwright-report/
+.playwright-cli/
 .env
 .env.local
 .env.production
