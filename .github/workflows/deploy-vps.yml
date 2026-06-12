@@ -66,13 +66,13 @@ jobs:
     steps:
       - name: Validate deploy secrets
         env:
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
           missing=0
-          for key in VPS_HOST VPS_USER VPS_SSH_KEY VPS_APP_DIR; do
+          for key in TS_AUTHKEY VPS_HOST VPS_USER VPS_APP_DIR; do
             if [ -z "${!key}" ]; then
               echo "::error title=Missing deploy secret::${key} is not configured"
               missing=1
@@ -80,19 +80,26 @@ jobs:
           done
           exit "${missing}"
 
-      - name: Deploy on VPS
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Connect to tailnet
+        uses: tailscale/github-action@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT || 22 }}
-          script: |
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          ping: ${{ secrets.VPS_HOST }}
+
+      - name: Deploy on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          tailscale ssh "${VPS_USER}@${VPS_HOST}" "VPS_APP_DIR='${VPS_APP_DIR}' bash -s" <<'REMOTE'
             set -euo pipefail
-            cd "${{ secrets.VPS_APP_DIR }}"
+            git config --global --add safe.directory "${VPS_APP_DIR}" || true
+            cd "${VPS_APP_DIR}"
             git fetch origin main
             git reset --hard origin/main
             SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"
             bash scripts/run-node-script.sh scripts/normalize-production-env.mjs --env-file .env --postgres-host-bind "${SERVER_PRIVATE_IP}"
-            bash scripts/vps-deploy.sh
+            COMPOSE_BAKE=false bash scripts/vps-deploy.sh
             bash scripts/vps-tailscale-serve.sh
+          REMOTE

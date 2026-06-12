@@ -4,15 +4,18 @@ import { describe, expect, it } from "vitest";
 const workflow = readFileSync(".github/workflows/deploy-vps.yml", "utf8");
 
 describe("GitHub Actions VPS deployment workflow", () => {
-  it("deploys main branch pushes to the VPS over SSH", () => {
+  it("deploys main branch pushes to the VPS over Tailscale SSH", () => {
     expect(workflow).toContain("name: Deploy VPS");
     expect(workflow).toContain("branches: [main]");
     expect(workflow).toContain("Validate deploy secrets");
     expect(workflow).toContain("Missing deploy secret");
-    expect(workflow).toContain("appleboy/ssh-action");
+    expect(workflow).toContain("tailscale/github-action@v4");
+    expect(workflow).toContain("secrets.TS_AUTHKEY");
     expect(workflow).toContain("secrets.VPS_HOST");
     expect(workflow).toContain("secrets.VPS_USER");
-    expect(workflow).toContain("secrets.VPS_SSH_KEY");
+    expect(workflow).toContain('tailscale ssh "${VPS_USER}@${VPS_HOST}"');
+    expect(workflow).not.toContain("appleboy/ssh-action");
+    expect(workflow).not.toContain("secrets.VPS_SSH_KEY");
   });
 
   it("provides a PostgreSQL test database for CI verification", () => {
