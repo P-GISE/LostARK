@@ -39,6 +39,17 @@ describe("VPS deployment config", () => {
     );
   });
 
+  it("reuses one built app image for VPS web and worker services", () => {
+    const compose = read("docker-compose.vps.yml");
+
+    const appImageReferences =
+      compose.match(/image: lostark-party-app:latest/g) ?? [];
+    const appBuildReferences = compose.match(/build: \./g) ?? [];
+
+    expect(appImageReferences).toHaveLength(3);
+    expect(appBuildReferences).toHaveLength(1);
+  });
+
   it("copies TypeScript path config into the runner image for worker scripts", () => {
     const dockerfile = read("Dockerfile");
 
