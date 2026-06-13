@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 ENV_FILE="${ENV_FILE:-.env}"
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-lostark-party}"
 
 if [ ! -f "${ENV_FILE}" ]; then
   echo "Missing ${ENV_FILE}. Copy .env.vps.example to ${ENV_FILE} and fill secrets first." >&2
@@ -65,5 +66,6 @@ fi
 echo "Pruning Docker build cache before rebuild..."
 docker_cli builder prune -af
 
-docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" up -d --build
+docker_cli build -t lostark-party-app:latest .
+docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" up -d
 docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" ps

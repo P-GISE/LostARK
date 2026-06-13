@@ -21,14 +21,19 @@ describe("VPS helper scripts", () => {
     expect(script).toContain("POSTGRES_PASSWORD");
     expect(script).toContain("SESSION_SECRET");
     expect(script).toContain("replace-with");
+    expect(script).toContain(
+      'export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-lostark-party}"',
+    );
     expect(script).toContain("docker info");
     expect(script).toContain("sudo -n docker info");
     expect(script).toContain('sudo -n docker "$@"');
     expect(script).toContain('docker_cli compose "$@"');
     expect(script).toContain("docker_cli builder prune -af");
+    expect(script).toContain("docker_cli build -t lostark-party-app:latest .");
     expect(script).toContain(
-      "docker_compose -f docker-compose.vps.yml --env-file \"${ENV_FILE}\" up -d --build",
+      "docker_compose -f docker-compose.vps.yml --env-file \"${ENV_FILE}\" up -d",
     );
+    expect(script).not.toContain("up -d --build");
   });
 
   it("checks server production env before deploying compose", () => {

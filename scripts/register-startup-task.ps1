@@ -5,13 +5,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$serverScript = Join-Path $projectRoot "scripts\start-prod-server.ps1"
+$pcLauncherScript = Join-Path $projectRoot "scripts\start-pc-production.ps1"
 $taskName = "LostArk Party Planner Server"
 $taskLog = Join-Path $projectRoot "scheduled-task.log"
 
 $action = New-ScheduledTaskAction `
   -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"`$env:PORT='$Port'; & '$serverScript'`""
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$pcLauncherScript`" -Port $Port"
 
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet `
