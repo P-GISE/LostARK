@@ -1,32 +1,18 @@
 import { writeGroupActivityLog } from "@/server/activity-log";
+import { RaidSetError, requireRaidSetManager } from "@/server/raid-set-access";
 import { db } from "@/server/db";
 import {
   requireCanConfirmSchedules,
   requireCanManageSets,
 } from "@/server/group-permissions";
 
-export class RaidSetError extends Error {
-  readonly name = "RaidSetError";
-}
-
-async function requireRaidSetManager(input: {
-  readonly actorMemberId: string;
-  readonly raidSetId: string;
-}) {
-  const actor = await requireCanManageSets(input.actorMemberId);
-  const raidSet = await db.raidSet.findUnique({
-    where: { id: input.raidSetId },
-  });
-
-  if (!raidSet) {
-    throw new RaidSetError("공대 편성을 찾을 수 없습니다");
-  }
-  if (actor.groupId !== raidSet.groupId) {
-    throw new RaidSetError("같은 공대의 편성만 변경할 수 있습니다");
-  }
-
-  return { actor, raidSet };
-}
+export { RaidSetError } from "@/server/raid-set-access";
+export {
+  assignRaidSetSlot,
+  markRaidSetSlotAbsent,
+  moveRaidSetSlot,
+  unassignRaidSetSlot,
+} from "@/server/raid-set-slots";
 
 export async function createRaidSetFromTemplate(input: {
   readonly actorMemberId: string;
@@ -91,114 +77,23 @@ export async function listRaidSetsForWeek(
   });
 }
 
-export async function assignRaidSetSlot(input: {
-  readonly actorMemberId: string;
-  readonly slotId: string;
-  readonly memberId: string;
-  readonly characterId: string;
-}) {
-  const slot = await db.raidSetSlot.findUnique({
-    where: { id: input.slotId },
-    include: { raidSet: true },
-  });
-  if (!slot) {
-    throw new RaidSetError("편성 자리를 찾을 수 없습니다");
-  }
+export async function deleteRaidSet(input: { readonly actorMemberId: string; readonly raidSetId: string }) {
+  const { raidSet } = await requireRaidSetManager(input);
 
-  await requireRaidSetManager({
-    actorMemberId: input.actorMemberId,
-    raidSetId: slot.raidSetId,
-  });
+  return db.$transaction(async (tx) => {
+    await tx.raidSignup.updateMany({
+      where: {
+        assignments: { some: { raidSetId: raidSet.id } }, status: "ASSIGNING",
+      },
+      data: { status: "OPEN" },
+    });
+    await tx.raidSignupEntry.updateMany({
+      where: { assignedRaidSetId: raidSet.id },
+      data: { assignedRaidSetId: null, status: "APPLIED" },
+    });
 
-  const character = await db.character.findUnique({
-    where: { id: input.characterId },
-    include: { member: true },
+    return tx.raidSet.delete({ where: { id: raidSet.id } });
   });
-  if (
-    !character ||
-    character.memberId !== input.memberId ||
-    character.member.groupId !== slot.raidSet.groupId
-  ) {
-    throw new RaidSetError("선택한 캐릭터가 해당 공대원의 캐릭터가 아닙니다");
-  }
-
-  const duplicate = await db.raidSetSlot.findFirst({
-    where: {
-      assignedCharacterId: input.characterId,
-      raidSetId: slot.raidSetId,
-      NOT: { id: input.slotId },
-    },
-  });
-  if (duplicate) {
-    throw new RaidSetError("이 편성에 이미 배정된 캐릭터입니다");
-  }
-
-  return db.raidSetSlot.update({
-    where: { id: input.slotId },
-    data: {
-      absent: false,
-      absentReason: "",
-      assignedCharacterId: input.characterId,
-      assignedMemberId: input.memberId,
-    },
-  });
-}
-
-export async function moveRaidSetSlot(input: {
-  readonly actorMemberId: string;
-  readonly slotId: string;
-  readonly order: number;
-}) {
-  const slot = await db.raidSetSlot.findUnique({
-    where: { id: input.slotId },
-  });
-  if (!slot) {
-    throw new RaidSetError("편성 자리를 찾을 수 없습니다");
-  }
-  await requireRaidSetManager({
-    actorMemberId: input.actorMemberId,
-    raidSetId: slot.raidSetId,
-  });
-
-  return db.raidSetSlot.update({
-    where: { id: input.slotId },
-    data: { order: input.order },
-  });
-}
-
-export async function markRaidSetSlotAbsent(input: {
-  readonly actorMemberId: string;
-  readonly slotId: string;
-  readonly absentReason: string;
-}) {
-  const slot = await db.raidSetSlot.findUnique({
-    where: { id: input.slotId },
-  });
-  if (!slot) {
-    throw new RaidSetError("편성 자리를 찾을 수 없습니다");
-  }
-  await requireRaidSetManager({
-    actorMemberId: input.actorMemberId,
-    raidSetId: slot.raidSetId,
-  });
-
-  return db.raidSetSlot.update({
-    where: { id: input.slotId },
-    data: {
-      absent: true,
-      absentReason: input.absentReason.trim(),
-      assignedCharacterId: null,
-      assignedMemberId: null,
-    },
-  });
-}
-
-export async function deleteRaidSet(input: {
-  readonly actorMemberId: string;
-  readonly raidSetId: string;
-}) {
-  await requireRaidSetManager(input);
-  return db.raidSet.delete({ where: { id: input.raidSetId } });
 }
 
 export async function confirmRaidSetSchedule(input: {

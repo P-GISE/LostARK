@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/auth/actions";
+import { GoogleAdSenseAdUnits } from "@/components/adsense-ad-units";
 import { AppNavLinks, type AppNavItem } from "@/components/app-nav";
 import { getCurrentMember, getCurrentUser } from "@/server/auth-context";
 import { isAdminUser } from "@/server/admin";
@@ -86,11 +87,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur">
         <div className={`${contentShellClassName} py-2.5`}>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap">
             <Link className="flex min-w-0 items-center gap-2 font-semibold text-slate-950" href="/">
-              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-sm text-white shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-teal-700 text-sm text-white shadow-sm">
                 LA
               </span>
               <span className="truncate">
@@ -112,7 +113,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <AppNavLinks items={secondaryNavItems} />
                 </nav>
-                <div className="hidden max-w-48 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 lg:block">
+                <div className="hidden max-w-48 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 lg:block">
                   {member.group.name}
                 </div>
                 <AccountMenu
@@ -161,6 +162,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       {children}
+      <GoogleAdSenseAdUnits />
     </div>
   );
 }

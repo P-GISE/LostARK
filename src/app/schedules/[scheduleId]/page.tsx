@@ -6,6 +6,7 @@ import {
   EmptyState,
   PageHeader,
   SectionPanel,
+  balancedPanelGridClassName,
   cx,
   dangerButtonClassName,
   inputClassName,
@@ -132,7 +133,7 @@ export default async function ScheduleDetailPage({
         eyebrow="일정 상세"
         title={schedule.title}
       />
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,22rem)_1fr]">
+      <div className={cx("mt-5", balancedPanelGridClassName)}>
         <div className="grid content-start gap-4">
           <SectionPanel title="일정 정보">
             <div className="grid gap-4">
@@ -242,7 +243,7 @@ export default async function ScheduleDetailPage({
                 {`${assignedCount} / ${schedule.slots.length}명 배정`}
               </Badge>
             }
-            className="mt-6"
+            className="mt-5"
             title="자리 배정"
           >
             <div

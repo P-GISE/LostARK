@@ -1,3 +1,4 @@
+import { compareRaidTemplateDisplay } from "@/lib/raid-template-display";
 import { db } from "@/server/db";
 import { requireCanManageSets } from "@/server/group-permissions";
 
@@ -56,18 +57,25 @@ export async function createRaidSignup(input: {
 }
 
 export async function listRaidSignups(groupId: string, weekStartDate: string) {
-  return db.raidSignup.findMany({
-    where: { groupId, weekStartDate },
+  const signups = await db.raidSignup.findMany({
+    where: { groupId, status: { not: "CANCELED" }, weekStartDate },
     include: {
       assignments: { include: { raidSet: true }, orderBy: { partyNumber: "asc" } },
       entries: {
         include: { character: true, member: true },
         orderBy: { createdAt: "asc" },
+        where: { status: { not: "CANCELED" } },
       },
       template: true,
     },
     orderBy: { createdAt: "desc" },
   });
+
+  return signups.sort(
+    (a, b) =>
+      compareRaidTemplateDisplay(a.template, b.template) ||
+      b.createdAt.getTime() - a.createdAt.getTime(),
+  );
 }
 
 export async function applyToRaidSignup(input: {
@@ -148,13 +156,19 @@ export async function assignRaidSignup(input: {
   if (!template) {
     throw new RaidSignupError("레이드 템플릿을 찾을 수 없습니다");
   }
+  if (signup.status !== "OPEN") {
+    throw new RaidSignupError("열려 있는 신청만 배정할 수 있습니다");
+  }
+  const fullPartyCount = Math.min(
+    Math.floor(entries.length / signup.partySize),
+    signup.maxParties,
+  );
+  if (fullPartyCount < 1) {
+    throw new RaidSignupError("배정할 신청 인원이 부족합니다");
+  }
 
   return db.$transaction(async (tx) => {
     const createdSetIds: string[] = [];
-    const fullPartyCount = Math.min(
-      Math.floor(entries.length / signup.partySize),
-      signup.maxParties,
-    );
 
     for (let partyIndex = 0; partyIndex < fullPartyCount; partyIndex += 1) {
       const partyEntries = entries.slice(

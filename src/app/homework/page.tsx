@@ -31,7 +31,11 @@ export default async function HomeworkPage() {
         eyebrow={weekStartDate}
         title="숙제 현황"
       />
-      <HomeworkBoard setHomeworkAction={setHomework} status={status} />
+      <HomeworkBoard
+        currentMemberId={member.id}
+        setHomeworkAction={setHomework}
+        status={status}
+      />
     </main>
   );
 }

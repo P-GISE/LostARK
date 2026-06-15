@@ -182,7 +182,7 @@ export default async function CalendarPage() {
       <AvailabilityCockpitHeader days={days} scheduleCount={schedules.length} />
       <div id="my-availability">
         <SectionPanel
-          className="availability-panel mt-6"
+          className="availability-panel mt-5"
           description="요일과 시간대를 선택해 참가 가능 여부를 빠르게 입력합니다."
           title="내 가능 시간 입력"
         >
@@ -200,14 +200,14 @@ export default async function CalendarPage() {
         saveOverrideAction={saveWeekOverride}
       />
       <div
-        className="availability-panel availability-panel--overview mt-6"
+        className="availability-panel availability-panel--overview mt-5"
         id="group-availability"
       >
         <AvailabilityOverview slots={groupOverview} />
       </div>
       <div id="upcoming-schedules">
         <SectionPanel
-          className="availability-panel mt-6"
+          className="availability-panel mt-5"
           description="앞으로 진행할 공대 일정을 확인합니다."
           title="일정"
         >
@@ -225,7 +225,7 @@ export default async function CalendarPage() {
 
                 return (
                   <Link
-                    className="grid gap-2 py-3 transition hover:bg-slate-50 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+                    className="grid gap-2 rounded-md px-3 py-2.5 transition hover:bg-slate-50 sm:grid-cols-[1fr_auto_auto] sm:items-center"
                     href={`/schedules/${schedule.id}`}
                     key={schedule.id}
                   >

@@ -34,11 +34,11 @@ export function AppNavLinks({
             aria-current={active ? "page" : undefined}
             className={cx(
               variant === "tab"
-                ? "inline-flex h-9 min-w-0 items-center justify-center rounded-md px-2 text-sm font-medium transition sm:justify-start sm:px-3"
-                : "flex h-9 w-full items-center rounded-md px-3 text-sm font-medium transition",
+                ? "inline-flex h-9 min-w-0 items-center justify-center rounded-md px-2 text-sm font-semibold transition sm:justify-start sm:px-3"
+                : "flex h-9 w-full items-center rounded-md px-3 text-sm font-semibold transition",
               active
                 ? variant === "tab"
-                  ? "bg-slate-900 text-white shadow-sm hover:bg-slate-800"
+                  ? "bg-teal-700 text-white shadow-sm hover:bg-teal-800"
                   : "bg-teal-50 text-teal-900"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
             )}

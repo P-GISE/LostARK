@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  balancedCardGridClassName,
+  balancedPanelGridClassName,
   contentShellClassName,
   narrowContentClassName,
   narrowPageShellClassName,
@@ -20,6 +22,17 @@ describe("layout spacing", () => {
     expect(pageShellClassName).toContain(contentShellClassName);
     expect(narrowPageShellClassName).toContain(contentShellClassName);
     expect(narrowContentClassName).toBe("mx-auto w-full max-w-md");
+  });
+
+  it("defines shared balanced grids for responsive two-sided layouts", () => {
+    const css = source("src/app/globals.css");
+
+    expect(balancedPanelGridClassName).toBe("grid balanced-panel-grid gap-4");
+    expect(balancedCardGridClassName).toBe("grid balanced-card-grid gap-4");
+    expect(css).toContain(".balanced-panel-grid");
+    expect(css).toContain("minmax(min(100%, 28rem), 1fr)");
+    expect(css).toContain(".balanced-card-grid");
+    expect(css).toContain("minmax(min(100%, 24rem), 1fr)");
   });
 
   it("uses the same shell spacing in the header and narrow entry pages", () => {

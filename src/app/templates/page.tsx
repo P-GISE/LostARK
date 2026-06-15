@@ -5,6 +5,8 @@ import {
   EmptyState,
   PageHeader,
   SectionPanel,
+  balancedPanelGridClassName,
+  cx,
   pageShellClassName,
   secondaryButtonClassName,
 } from "@/components/ui";
@@ -137,7 +139,7 @@ export default async function TemplatesPage() {
         title="레이드 템플릿"
       />
       {member.role === "LEADER" ? (
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,24rem)_1fr]">
+        <div className={cx("mt-5", balancedPanelGridClassName)}>
           <div className="grid content-start gap-4">
             <SectionPanel
               action={
@@ -237,7 +239,7 @@ export default async function TemplatesPage() {
           </SectionPanel>
         </div>
       ) : (
-        <div className="mt-6">
+        <div className="mt-5">
           <EmptyState title="공대장만 템플릿을 만들거나 삭제할 수 있습니다." />
         </div>
       )}

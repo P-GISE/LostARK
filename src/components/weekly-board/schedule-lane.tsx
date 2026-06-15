@@ -28,7 +28,7 @@ export function ScheduleLane({
   readonly schedules: readonly WeeklyScheduleView[];
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60">
       <h2 className="text-sm font-semibold text-slate-950">{dateLabel}</h2>
       <div className="mt-3 grid gap-2">
         {schedules.length === 0 ? (
@@ -38,7 +38,7 @@ export function ScheduleLane({
         ) : (
           schedules.map((schedule) => (
             <article
-              className="rounded-md border border-slate-100 bg-slate-50 p-3"
+              className="rounded-md border border-slate-200 bg-slate-50/70 p-3"
               key={schedule.id}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">

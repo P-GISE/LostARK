@@ -3,19 +3,45 @@ import { SetBuilderBoard } from "@/components/set-builder/set-builder-board";
 import { PageHeader, pageShellClassName } from "@/components/ui";
 import { getLostArkWeekStartDate } from "@/lib/lostark-week";
 import { requireCurrentMember } from "@/server/auth-context";
+import { canManageSets } from "@/server/group-permissions";
+import { listMembers } from "@/server/members";
+import {
+  assignRaidSetSlot,
+  markRaidSetSlotAbsent,
+  unassignRaidSetSlot,
+} from "@/server/raid-set-slots";
 import {
   createRaidSetFromTemplate,
+  deleteRaidSet,
   listRaidSetsForWeek,
 } from "@/server/raid-sets";
 import { listRaidTemplates } from "@/server/raid-templates";
 
+function revalidateSetSurfaces() {
+  revalidatePath("/sets");
+  revalidatePath("/weekly");
+  revalidatePath("/signup");
+}
+
 export default async function SetsPage() {
   const member = await requireCurrentMember({ loginRedirectPath: "/sets" });
   const weekStartDate = getLostArkWeekStartDate();
-  const [templates, raidSets] = await Promise.all([
+  const [templates, raidSets, members, canManageRaidSets] = await Promise.all([
     listRaidTemplates(member.groupId),
     listRaidSetsForWeek(member.groupId, weekStartDate),
+    listMembers(member.groupId),
+    canManageSets(member.id),
   ]);
+  const assignmentOptions = members.flatMap((groupMember) =>
+    groupMember.characters.map((character) => ({
+      characterId: character.id,
+      className: character.className,
+      memberId: groupMember.id,
+      name: character.name,
+      nickname: groupMember.nickname,
+      role: character.preferredRole,
+    })),
+  );
 
   async function createSet(formData: FormData) {
     "use server";
@@ -30,15 +56,63 @@ export default async function SetsPage() {
     revalidatePath("/weekly");
   }
 
+  async function assignSetSlot(formData: FormData) {
+    "use server";
+    const current = await requireCurrentMember();
+    await assignRaidSetSlot({
+      actorMemberId: current.id,
+      characterId: String(formData.get("characterId") ?? ""),
+      slotId: String(formData.get("slotId") ?? ""),
+    });
+    revalidateSetSurfaces();
+  }
+
+  async function clearSetSlot(formData: FormData) {
+    "use server";
+    const current = await requireCurrentMember();
+    await unassignRaidSetSlot({
+      actorMemberId: current.id,
+      slotId: String(formData.get("slotId") ?? ""),
+    });
+    revalidateSetSurfaces();
+  }
+
+  async function markSetSlotAbsent(formData: FormData) {
+    "use server";
+    const current = await requireCurrentMember();
+    await markRaidSetSlotAbsent({
+      absentReason: String(formData.get("absentReason") ?? ""),
+      actorMemberId: current.id,
+      slotId: String(formData.get("slotId") ?? ""),
+    });
+    revalidateSetSurfaces();
+  }
+
+  async function deleteSet(formData: FormData) {
+    "use server";
+    const current = await requireCurrentMember();
+    await deleteRaidSet({
+      actorMemberId: current.id,
+      raidSetId: String(formData.get("raidSetId") ?? ""),
+    });
+    revalidateSetSurfaces();
+  }
+
   return (
     <main className={pageShellClassName}>
       <PageHeader
-        description="레이드 템플릿으로 이번 주 공대 편성을 만들고 배정 상태를 확인합니다."
+        description="직접 만든 편성과 수강 신청 배정 결과를 함께 확인합니다."
         eyebrow={weekStartDate}
         title="공대 편성"
       />
       <SetBuilderBoard
+        assignmentOptions={assignmentOptions}
+        assignSlotAction={assignSetSlot}
+        canManageSets={canManageRaidSets}
+        clearSlotAction={clearSetSlot}
         createSetAction={createSet}
+        deleteSetAction={deleteSet}
+        markAbsentAction={markSetSlotAbsent}
         raidSets={raidSets}
         templates={templates}
         weekStartDate={weekStartDate}

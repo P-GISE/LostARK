@@ -1,6 +1,7 @@
 import {
   EmptyState,
   SectionPanel,
+  balancedPanelGridClassName,
   inputClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
@@ -29,15 +30,15 @@ export function AvailabilityPresetsPanel({
   readonly saveOverrideAction?: (formData: FormData) => Promise<void>;
 }) {
   return (
-    <SectionPanel className="availability-panel mt-6" title="내 프리셋">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+    <SectionPanel className="availability-panel mt-5" title="내 프리셋">
+      <div className={balancedPanelGridClassName}>
         <div className="grid gap-3">
           {presets.length === 0 ? (
             <EmptyState title="저장된 프리셋이 없습니다." />
           ) : (
             presets.map((preset) => (
               <div
-                className="rounded-md border border-slate-200 p-3"
+                className="rounded-md border border-slate-200 bg-slate-50/70 p-3"
                 key={preset.id}
               >
                 <div className="font-semibold text-slate-950">{preset.name}</div>
@@ -60,17 +61,21 @@ export function AvailabilityPresetsPanel({
         </div>
         <div className="grid content-start gap-3">
           <form action={createPresetAction} className="grid gap-2">
-            <input
-              className={inputClassName}
-              defaultValue="평일 저녁"
-              name="name"
-            />
+            <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+              프리셋 이름
+              <input
+                className={inputClassName}
+                defaultValue="평일 저녁"
+                name="name"
+              />
+            </label>
             <input name="dayOfWeek" type="hidden" value="5" />
             <input name="startTime" type="hidden" value="20:00" />
             <input name="endTime" type="hidden" value="23:00" />
             <button className={primaryButtonClassName}>프리셋 만들기</button>
           </form>
           <form action={saveOverrideAction} className="grid gap-2">
+            <div className="text-xs font-semibold text-slate-600">빠른 저장</div>
             <input name="dayOfWeek" type="hidden" value="5" />
             <input name="startTime" type="hidden" value="21:00" />
             <input name="endTime" type="hidden" value="23:00" />

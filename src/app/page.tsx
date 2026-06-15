@@ -6,6 +6,9 @@ import {
   MetricCard,
   PageHeader,
   SectionPanel,
+  balancedCardGridClassName,
+  balancedPanelGridClassName,
+  cx,
   pageShellClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
@@ -20,8 +23,8 @@ export default async function HomePage() {
   if (!member) {
     return (
       <main className={pageShellClassName}>
-        <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-          <div className="rounded-lg border border-slate-200/90 bg-white p-6 shadow-sm shadow-slate-200/70 sm:p-8">
+        <section className={cx(balancedPanelGridClassName, "lg:items-start")}>
+          <div className="rounded-lg border border-slate-200/90 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8">
             <div className="text-sm font-semibold text-teal-700">LOST ARK PARTY</div>
             <h1 className="mt-2 max-w-3xl text-3xl font-semibold text-slate-950 sm:text-4xl">
               로스트아크 고정 공대 운영을 한곳에서 정리합니다
@@ -67,13 +70,15 @@ export default async function HomePage() {
               </p>
             ) : null}
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-950 p-5 text-white shadow-sm shadow-slate-300/70">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <div className="text-sm font-semibold text-teal-200">주간 운영판</div>
-                <div className="mt-1 text-xl font-semibold">목요일 리셋 기준 예시</div>
+                <div className="text-sm font-semibold text-teal-700">주간 운영판</div>
+                <div className="mt-1 text-xl font-semibold text-slate-950">
+                  목요일 리셋 기준 예시
+                </div>
               </div>
-              <div className="rounded-md bg-teal-300 px-2 py-1 text-xs font-semibold text-slate-950">
+              <div className="rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">
                 공개 예시
               </div>
             </div>
@@ -85,15 +90,15 @@ export default async function HomePage() {
                 ["목", "리셋 후 점검", "완료 상태와 다음 주 반복 일정을 정리"],
               ].map(([day, title, description]) => (
                 <div
-                  className="grid grid-cols-[2.75rem_1fr] gap-3 rounded-md border border-white/10 bg-white/5 p-3"
+                  className="grid grid-cols-[2.75rem_1fr] gap-3 rounded-md border border-slate-200 bg-slate-50/70 p-3"
                   key={day}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white text-sm font-semibold text-slate-950">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-teal-700 text-sm font-semibold text-white">
                     {day}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold">{title}</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-300">
+                    <div className="text-sm font-semibold text-slate-950">{title}</div>
+                    <div className="mt-1 text-sm leading-6 text-slate-600">
                       {description}
                     </div>
                   </div>
@@ -102,7 +107,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
-        <section className="mt-6 grid gap-3 lg:grid-cols-3">
+        <section className="mt-5 grid gap-3 lg:grid-cols-3">
           {[
             [
               "고정 공대 운영 체크리스트",
@@ -118,7 +123,7 @@ export default async function HomePage() {
             ],
           ].map(([title, description]) => (
             <article
-              className="rounded-lg border border-slate-200/90 bg-white p-5 shadow-sm shadow-slate-200/70"
+              className="rounded-lg border border-slate-200/90 bg-white p-5 shadow-sm shadow-slate-200/60"
               key={title}
             >
               <h2 className="text-base font-semibold text-slate-950">{title}</h2>
@@ -139,7 +144,7 @@ export default async function HomePage() {
         eyebrow="공대 운영"
         title="대시보드"
       />
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <MetricCard
           detail="현재 공대에 참여 중인 인원"
           label="공대원"
@@ -156,11 +161,11 @@ export default async function HomePage() {
           value={summary.failedNotifications}
         />
       </div>
-      <SectionPanel className="mt-6" title="다가오는 레이드">
+      <SectionPanel className="mt-5" title="다가오는 레이드">
         {summary.upcomingSchedules.length === 0 ? (
           <EmptyState title="다가오는 일정이 없습니다." />
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className={balancedCardGridClassName}>
             {summary.upcomingSchedules.map((schedule) => (
               <ScheduleCard
                 key={schedule.id}

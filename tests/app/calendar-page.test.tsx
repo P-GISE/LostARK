@@ -140,7 +140,7 @@ describe("CalendarPage", () => {
 
     expect(screen.getByText("입력 기간")).toBeInTheDocument();
     expect(
-      within(workflowNav).getByRole("link", { name: "내 입력" }),
+      within(workflowNav).getByRole("link", { name: "내 가능 시간" }),
     ).toHaveAttribute("href", "#my-availability");
     expect(
       within(workflowNav).getByRole("link", { name: "공대 현황" }),

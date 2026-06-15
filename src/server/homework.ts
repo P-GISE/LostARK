@@ -1,8 +1,38 @@
+import { compareRaidTemplateDisplay } from "@/lib/raid-template-display";
 import { db } from "@/server/db";
 import { requireCanManageHomework } from "@/server/group-permissions";
 
 export class HomeworkError extends Error {
   readonly name = "HomeworkError";
+}
+
+function getGroupedHomeworkCounts(
+  characters: readonly {
+    readonly raids: readonly {
+      readonly completed: boolean;
+      readonly raidTemplateName: string;
+    }[];
+  }[],
+) {
+  return characters.reduce(
+    (total, character) => {
+      const raidGroups = new Map<string, boolean>();
+
+      for (const raid of character.raids) {
+        const name = raid.raidTemplateName.trim();
+        const key = name.length === 0 ? "이름 없는 레이드" : name;
+        raidGroups.set(key, (raidGroups.get(key) ?? false) || raid.completed);
+      }
+
+      return {
+        completedCount:
+          total.completedCount +
+          [...raidGroups.values()].filter((completed) => completed).length,
+        totalCount: total.totalCount + raidGroups.size,
+      };
+    },
+    { completedCount: 0, totalCount: 0 },
+  );
 }
 
 async function loadHomeworkMutationContext(input: {
@@ -56,11 +86,12 @@ export async function listHomeworkStatus(
   const completedKeys = new Set(
     checks.map((check) => `${check.characterId}:${check.raidTemplateId}`),
   );
+  const sortedTemplates = [...templates].sort(compareRaidTemplateDisplay);
 
   return {
     members: members.map((member) => {
       const characters = member.characters.map((character) => {
-        const raids = templates.map((template) => ({
+        const raids = sortedTemplates.map((template) => ({
           completed: completedKeys.has(`${character.id}:${template.id}`),
           difficulty: template.difficulty,
           gates: template.gates,
@@ -69,20 +100,14 @@ export async function listHomeworkStatus(
         }));
 
         return {
+          className: character.className,
           id: character.id,
+          itemLevel: character.itemLevel,
           name: character.name,
           raids,
         };
       });
-      const completedCount = characters.reduce(
-        (count, character) =>
-          count + character.raids.filter((raid) => raid.completed).length,
-        0,
-      );
-      const totalCount = characters.reduce(
-        (count, character) => count + character.raids.length,
-        0,
-      );
+      const { completedCount, totalCount } = getGroupedHomeworkCounts(characters);
 
       return {
         characters,

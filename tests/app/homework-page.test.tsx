@@ -39,6 +39,13 @@ describe("HomeworkPage", () => {
           nickname: "Leader",
           totalCount: 0,
         },
+        {
+          characters: [],
+          completedCount: 0,
+          id: "member-2",
+          nickname: "Other",
+          totalCount: 0,
+        },
       ],
       weekStartDate: "2030-06-05",
     });
@@ -48,6 +55,7 @@ describe("HomeworkPage", () => {
 
     // Then
     expect(screen.getByRole("heading", { name: "숙제 현황" })).toBeInTheDocument();
-    expect(screen.getByText("Leader")).toBeInTheDocument();
+    expect(screen.getByLabelText("Leader 숙제")).toHaveAttribute("open");
+    expect(screen.getByLabelText("Other 숙제")).not.toHaveAttribute("open");
   });
 });

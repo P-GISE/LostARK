@@ -1,4 +1,11 @@
-import { Badge, EmptyState, SectionPanel } from "@/components/ui";
+import {
+  Badge,
+  EmptyState,
+  SectionPanel,
+  balancedPanelGridClassName,
+  cx,
+  secondaryButtonClassName,
+} from "@/components/ui";
 import {
   ScheduleLane,
   type WeeklyScheduleView,
@@ -55,7 +62,7 @@ export function WeeklyBoard({
   const scheduleGroups = groupSchedulesByDate(schedules);
 
   return (
-    <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_minmax(18rem,24rem)]">
+    <div className={cx("mt-5", balancedPanelGridClassName)}>
       <div className="grid content-start gap-4">
         {scheduleGroups.length === 0 ? (
           <SectionPanel title="확정 일정">
@@ -75,7 +82,7 @@ export function WeeklyBoard({
       <SectionPanel
         action={
           <button
-            className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
+            className={secondaryButtonClassName}
             type="button"
           >
             이번 주 일정 복사
@@ -89,7 +96,7 @@ export function WeeklyBoard({
           <div className="grid gap-3">
             {raidSets.map((raidSet) => (
               <article
-                className="rounded-md border border-slate-200 p-3"
+                className="rounded-md border border-slate-200 bg-slate-50/70 p-3"
                 key={raidSet.id}
               >
                 <div className="flex flex-wrap items-center gap-2">

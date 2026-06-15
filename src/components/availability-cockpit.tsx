@@ -4,7 +4,7 @@ type CockpitDay = {
 };
 
 const workflowLinks = [
-  { href: "#my-availability", label: "내 입력" },
+  { href: "#my-availability", label: "내 가능 시간" },
   { href: "#group-availability", label: "공대 현황" },
   { href: "#upcoming-schedules", label: "일정" },
 ] as const;
@@ -50,8 +50,8 @@ export function AvailabilityCockpitHeader({
       className="availability-command"
     >
       <div className="availability-command__title">
-        <span>WEEKLY OPS</span>
-        <strong>가능 시간 운영판</strong>
+        <span>가능 시간</span>
+        <strong>이번 주 입력 현황</strong>
       </div>
       <nav
         aria-label="가능 시간 작업 흐름"
