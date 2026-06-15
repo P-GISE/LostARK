@@ -5,11 +5,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$serverScript = Join-Path $projectRoot "scripts\start-prod-server.ps1"
+$pcLauncherScript = Join-Path $projectRoot "scripts\start-pc-production.ps1"
 $taskName = "LostArk Party Planner Server"
 $taskLog = Join-Path $projectRoot "scheduled-task-action.log"
 $errorLog = Join-Path $projectRoot "scheduled-task-action.err.log"
-$argument = "-NoProfile -ExecutionPolicy Bypass -Command `"`$env:PORT='$Port'; & '$serverScript'`""
+$argument = "-NoProfile -ExecutionPolicy Bypass -File `"$pcLauncherScript`" -Port $Port"
 
 try {
   "Updating $taskName to port $Port" |

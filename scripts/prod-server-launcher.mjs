@@ -4,8 +4,23 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const port = process.env.PORT || "3001";
-const hostname = process.env.PROD_SERVER_HOSTNAME || "0.0.0.0";
+
+function readOption(name) {
+  const optionIndex = process.argv.indexOf(name);
+  if (optionIndex === -1) {
+    return null;
+  }
+
+  const value = process.argv[optionIndex + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${name} requires a value.`);
+  }
+
+  return value;
+}
+
+const port = readOption("--port") ?? process.env.PORT ?? "3001";
+const hostname = readOption("--hostname") ?? process.env.PROD_SERVER_HOSTNAME ?? "0.0.0.0";
 const nextCli = join(projectRoot, "node_modules", "next", "dist", "bin", "next");
 const outLog = join(projectRoot, `next-start-${port}.out.log`);
 const errLog = join(projectRoot, `next-start-${port}.err.log`);

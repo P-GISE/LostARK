@@ -9,8 +9,6 @@ $port = if ($env:PORT) { [int]$env:PORT } else { 3001 }
 $hostname = "0.0.0.0"
 $outLog = Join-Path $projectRoot "next-start-$port.out.log"
 $errLog = Join-Path $projectRoot "next-start-$port.err.log"
-$launcherOutLog = Join-Path $projectRoot "prod-server-launcher-$port.out.log"
-$launcherErrLog = Join-Path $projectRoot "prod-server-launcher-$port.err.log"
 $launcherPidFile = Join-Path $projectRoot "prod-server-launcher-$port.pid"
 $launcherLog = Join-Path $projectRoot "server-launcher.log"
 
@@ -88,13 +86,13 @@ if (-not (Test-Path -LiteralPath $launcherScriptPath)) {
   exit 1
 }
 
-$env:PORT = "$port"
-$env:PROD_SERVER_HOSTNAME = $hostname
+$launcherArguments = "`"$launcherScriptPath`" --port `"$port`" --hostname `"$hostname`""
 
-Start-Process `
-  -FilePath $node `
-  -ArgumentList @($launcherScript) `
-  -WorkingDirectory $projectRoot `
-  -RedirectStandardOutput $launcherOutLog `
-  -RedirectStandardError $launcherErrLog `
-  -WindowStyle Hidden
+$startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+$startInfo.FileName = $node
+$startInfo.Arguments = $launcherArguments
+$startInfo.WorkingDirectory = $projectRoot
+$startInfo.CreateNoWindow = $true
+$startInfo.UseShellExecute = $false
+
+[System.Diagnostics.Process]::Start($startInfo) | Out-Null
