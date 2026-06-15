@@ -11,14 +11,17 @@ import {
 
 const primaryNavItems: AppNavItem[] = [
   { href: "/", label: "대시보드" },
+  { href: "/weekly", label: "주간" },
+  { href: "/sets", label: "편성" },
   { href: "/calendar", label: "가능 시간" },
-  { href: "/schedules", label: "일정" },
-  { href: "/members", label: "공대원" },
 ];
 
 const secondaryNavItems: AppNavItem[] = [
+  { href: "/homework", label: "숙제" },
+  { href: "/signup", label: "신청" },
   { href: "/templates", label: "템플릿" },
   { href: "/notifications", label: "알림" },
+  { href: "/members", label: "공대원" },
 ];
 
 const publicNavItems: AppNavItem[] = [

@@ -22,7 +22,7 @@ describe("AppShell", () => {
     vi.clearAllMocks();
     delete process.env.ADMIN_EMAILS;
     mocks.getCurrentUser.mockResolvedValue(null);
-    mocks.usePathname.mockReturnValue("/schedules");
+    mocks.usePathname.mockReturnValue("/weekly");
   });
 
   it("shows Korean planner navigation after joining a group", async () => {
@@ -42,22 +42,30 @@ describe("AppShell", () => {
       "href",
       "/",
     );
-    expect(primaryNav.getByRole("link", { name: "가능 시간" })).toHaveAttribute(
-      "href",
-      "/calendar",
-    );
-    expect(primaryNav.getByRole("link", { name: "일정" })).toHaveAttribute(
+    expect(primaryNav.getByRole("link", { name: "주간" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(primaryNav.getByRole("link", { name: "공대원" })).toHaveAttribute(
+    expect(primaryNav.getByRole("link", { name: "편성" })).toHaveAttribute(
       "href",
-      "/members",
+      "/sets",
+    );
+    expect(primaryNav.getByRole("link", { name: "가능 시간" })).toHaveAttribute(
+      "href",
+      "/calendar",
     );
     expect(primaryNav.queryByRole("link", { name: "템플릿" })).not.toBeInTheDocument();
 
     const secondaryNav = within(
       screen.getByRole("navigation", { name: "보조 메뉴" }),
+    );
+    expect(secondaryNav.getByRole("link", { name: "숙제" })).toHaveAttribute(
+      "href",
+      "/homework",
+    );
+    expect(secondaryNav.getByRole("link", { name: "신청" })).toHaveAttribute(
+      "href",
+      "/signup",
     );
     expect(secondaryNav.getByRole("link", { name: "템플릿" })).toHaveAttribute(
       "href",
@@ -66,6 +74,10 @@ describe("AppShell", () => {
     expect(secondaryNav.getByRole("link", { name: "알림" })).toHaveAttribute(
       "href",
       "/notifications",
+    );
+    expect(secondaryNav.getByRole("link", { name: "공대원" })).toHaveAttribute(
+      "href",
+      "/members",
     );
 
     const accountMenu = within(screen.getByLabelText("계정 메뉴"));
