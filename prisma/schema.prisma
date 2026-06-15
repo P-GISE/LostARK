@@ -47,17 +47,47 @@ enum NotificationStatus {
   CANCELED
 }
 
+enum RaidSetStatus {
+  DRAFT
+  SCHEDULED
+  CONFIRMED
+  CANCELED
+}
+
+enum AvailabilityPresetMode {
+  WEEKLY
+  CYCLE
+}
+
+enum RaidSignupStatus {
+  OPEN
+  ASSIGNING
+  FINALIZED
+  CANCELED
+}
+
+enum RaidSignupEntryStatus {
+  APPLIED
+  CANCELED
+  ASSIGNED
+  FAILED
+}
+
 model Group {
-  id            String            @id @default(cuid())
+  id            String             @id @default(cuid())
   name          String
-  inviteCode    String            @unique
-  inviteEnabled Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  inviteCode    String             @unique
+  inviteEnabled Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
   members       Member[]
   templates     RaidTemplate[]
   schedules     Schedule[]
   notifications NotificationJob[]
+  settings      GroupSettings?
+  activityLogs  GroupActivityLog[]
+  raidSets      RaidSet[]
+  signups       RaidSignup[]
 }
 
 model User {
@@ -71,25 +101,33 @@ model User {
 }
 
 model Member {
-  id                  String               @id @default(cuid())
-  groupId             String
-  group               Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  userId              String?
-  user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
-  nickname            String
-  role                MemberRole           @default(MEMBER)
-  discordUserId       String?
-  discordConnectedAt  DateTime?
-  characterSyncFailedAt     DateTime?
+  id                         String                     @id @default(cuid())
+  groupId                    String
+  group                      Group                      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId                     String?
+  user                       User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  nickname                   String
+  role                       MemberRole                 @default(MEMBER)
+  discordUserId              String?
+  discordConnectedAt         DateTime?
+  characterSyncFailedAt      DateTime?
   characterSyncFailureReason String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  characters          Character[]
-  availabilityBlocks  AvailabilityBlock[]
-  createdSchedules    Schedule[]           @relation("ScheduleCreator")
-  assignedSlots       ScheduleSlot[]
-  notifications       NotificationJob[]
-  scheduleAttendances ScheduleAttendance[]
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  characters                 Character[]
+  availabilityBlocks         AvailabilityBlock[]
+  createdSchedules           Schedule[]                 @relation("ScheduleCreator")
+  assignedSlots              ScheduleSlot[]
+  notifications              NotificationJob[]
+  scheduleAttendances        ScheduleAttendance[]
+  permissions                MemberPermission?
+  activityLogs               GroupActivityLog[]
+  createdRaidSets            RaidSet[]
+  raidSetSlots               RaidSetSlot[]
+  availabilityPresets        AvailabilityPreset[]
+  availabilityWeekOverrides  AvailabilityWeekOverride[]
+  signupEntries              RaidSignupEntry[]
+  createdSignups             RaidSignup[]
 
   @@unique([groupId, nickname])
   @@unique([groupId, userId])
@@ -113,6 +151,8 @@ model Character {
   updatedAt     DateTime             @updatedAt
   scheduleSlots ScheduleSlot[]
   raidChecks    CharacterRaidCheck[]
+  raidSetSlots  RaidSetSlot[]
+  signupEntries RaidSignupEntry[]
 }
 
 model AvailabilityBlock {
@@ -145,6 +185,8 @@ model RaidTemplate {
   slots               RaidTemplateSlot[]
   schedules           Schedule[]
   characterRaidChecks CharacterRaidCheck[]
+  raidSets            RaidSet[]
+  signups             RaidSignup[]
 }
 
 model CharacterRaidCheck {
@@ -242,4 +284,175 @@ model NotificationJob {
   attempts      Int                @default(0)
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+}
+
+model GroupSettings {
+  id                              String   @id @default(cuid())
+  groupId                         String   @unique
+  group                           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  timetableStartHour              Int      @default(8)
+  timetableEndHour                Int      @default(4)
+  dailyDiscordSummaryEnabled      Boolean  @default(false)
+  dailyDiscordSummaryTime         String   @default("09:00")
+  raidReminderLeadMinutes         Int      @default(60)
+  availabilityChangeNoticeEnabled Boolean  @default(false)
+  discordChannelId                String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+}
+
+model MemberPermission {
+  id                         String  @id @default(cuid())
+  memberId                   String  @unique
+  member                     Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  canManageSets              Boolean @default(false)
+  canConfirmSchedules        Boolean @default(false)
+  canEditSchedules           Boolean @default(false)
+  canManageHomeworkForOthers Boolean @default(false)
+  canManageSettings          Boolean @default(false)
+}
+
+model GroupActivityLog {
+  id            String   @id @default(cuid())
+  groupId       String
+  group         Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actorMemberId String?
+  actorMember   Member?  @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
+  actionType    String
+  targetType    String
+  targetId      String?
+  summary       String
+  createdAt     DateTime @default(now())
+
+  @@index([groupId, createdAt])
+}
+
+model RaidSet {
+  id                String                 @id @default(cuid())
+  groupId           String
+  group             Group                  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  templateId        String
+  template          RaidTemplate           @relation(fields: [templateId], references: [id])
+  label             String
+  weekStartDate     String
+  status            RaidSetStatus          @default(DRAFT)
+  pinned            Boolean                @default(false)
+  scheduledStartsAt DateTime?
+  createdByMemberId String
+  createdBy         Member                 @relation(fields: [createdByMemberId], references: [id])
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  slots             RaidSetSlot[]
+  signupAssignments RaidSignupAssignment[]
+  signupEntries     RaidSignupEntry[]      @relation("RaidSignupEntryAssignedSet")
+
+  @@index([groupId, weekStartDate])
+  @@index([templateId])
+}
+
+model RaidSetSlot {
+  id                  String     @id @default(cuid())
+  raidSetId           String
+  raidSet             RaidSet    @relation(fields: [raidSetId], references: [id], onDelete: Cascade)
+  order               Int
+  label               String
+  role                SlotRole
+  assignedMemberId    String?
+  assignedMember      Member?    @relation(fields: [assignedMemberId], references: [id])
+  assignedCharacterId String?
+  assignedCharacter   Character? @relation(fields: [assignedCharacterId], references: [id])
+  absent              Boolean    @default(false)
+  absentReason        String     @default("")
+  roleOverride        SlotRole?
+
+  @@index([raidSetId, order])
+}
+
+model AvailabilityPreset {
+  id         String                   @id @default(cuid())
+  memberId   String
+  member     Member                   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  name       String
+  mode       AvailabilityPresetMode
+  cycleDays  Int?
+  anchorDate String?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+  slots      AvailabilityPresetSlot[]
+
+  @@index([memberId])
+}
+
+model AvailabilityPresetSlot {
+  id        String             @id @default(cuid())
+  presetId  String
+  preset    AvailabilityPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  dayOfWeek Int?
+  cycleDay  Int?
+  startTime String
+  endTime   String
+}
+
+model AvailabilityWeekOverride {
+  id            String   @id @default(cuid())
+  memberId      String
+  member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  weekStartDate String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([memberId, weekStartDate])
+}
+
+model RaidSignup {
+  id                String                 @id @default(cuid())
+  groupId           String
+  group             Group                  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  templateId        String
+  template          RaidTemplate           @relation(fields: [templateId], references: [id])
+  title             String
+  weekStartDate     String
+  partySize         Int
+  maxParties        Int
+  status            RaidSignupStatus       @default(OPEN)
+  createdByMemberId String
+  createdBy         Member                 @relation(fields: [createdByMemberId], references: [id])
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  entries           RaidSignupEntry[]
+  assignments       RaidSignupAssignment[]
+
+  @@index([groupId, weekStartDate])
+}
+
+model RaidSignupEntry {
+  id                String                @id @default(cuid())
+  signupId          String
+  signup            RaidSignup            @relation(fields: [signupId], references: [id], onDelete: Cascade)
+  memberId          String
+  member            Member                @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  characterId       String
+  character         Character             @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  status            RaidSignupEntryStatus @default(APPLIED)
+  memo              String                @default("")
+  assignedRaidSetId String?
+  assignedRaidSet   RaidSet?              @relation("RaidSignupEntryAssignedSet", fields: [assignedRaidSetId], references: [id], onDelete: SetNull)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@unique([signupId, characterId])
+  @@index([memberId])
+  @@index([assignedRaidSetId])
+}
+
+model RaidSignupAssignment {
+  id          String     @id @default(cuid())
+  signupId    String
+  signup      RaidSignup @relation(fields: [signupId], references: [id], onDelete: Cascade)
+  raidSetId   String
+  raidSet     RaidSet    @relation(fields: [raidSetId], references: [id], onDelete: Cascade)
+  partyNumber Int
+  createdAt   DateTime   @default(now())
+
+  @@unique([signupId, raidSetId])
 }
