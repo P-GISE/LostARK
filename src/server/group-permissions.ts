@@ -105,3 +105,11 @@ export async function updateMemberPermissions(input: {
     update: input.permissions,
   });
 }
+
+export async function listGroupPermissionMembers(groupId: string) {
+  return db.member.findMany({
+    where: { groupId },
+    include: { permissions: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
