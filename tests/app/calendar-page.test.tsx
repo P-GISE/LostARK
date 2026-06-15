@@ -1,13 +1,16 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CalendarPage from "@/app/calendar/page";
 
 const mocks = vi.hoisted(() => ({
   deleteStaleAvailabilityBlocksForGroup: vi.fn(),
+  createAvailabilityPreset: vi.fn(),
   getGroupAvailabilityOverview: vi.fn(),
+  listAvailabilityPresets: vi.fn(),
   listAvailabilityForMember: vi.fn(),
   listUpcomingSchedules: vi.fn(),
   requireCurrentMember: vi.fn(),
+  saveAvailabilityWeekOverride: vi.fn(),
 }));
 
 vi.mock("@/components/availability-grid", () => ({
@@ -47,6 +50,12 @@ vi.mock("@/server/availability-reset", () => ({
     mocks.deleteStaleAvailabilityBlocksForGroup,
 }));
 
+vi.mock("@/server/availability-presets", () => ({
+  createAvailabilityPreset: mocks.createAvailabilityPreset,
+  listAvailabilityPresets: mocks.listAvailabilityPresets,
+  saveAvailabilityWeekOverride: mocks.saveAvailabilityWeekOverride,
+}));
+
 vi.mock("@/server/availability", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/availability")>();
   return {
@@ -65,6 +74,7 @@ describe("CalendarPage", () => {
     });
     mocks.deleteStaleAvailabilityBlocksForGroup.mockResolvedValue({ count: 0 });
     mocks.listAvailabilityForMember.mockResolvedValue([]);
+    mocks.listAvailabilityPresets.mockResolvedValue([]);
     mocks.getGroupAvailabilityOverview.mockResolvedValue([]);
     mocks.listUpcomingSchedules.mockResolvedValue([]);
   });
@@ -119,6 +129,26 @@ describe("CalendarPage", () => {
     expect(screen.getByTestId("availability-overview")).toHaveTextContent(
       "overview slots 1",
     );
+  });
+
+  it("renders a compact availability workflow command bar", async () => {
+    render(await CalendarPage());
+
+    const workflowNav = screen.getByRole("navigation", {
+      name: "가능 시간 작업 흐름",
+    });
+
+    expect(screen.getByText("입력 기간")).toBeInTheDocument();
+    expect(
+      within(workflowNav).getByRole("link", { name: "내 입력" }),
+    ).toHaveAttribute("href", "#my-availability");
+    expect(
+      within(workflowNav).getByRole("link", { name: "공대 현황" }),
+    ).toHaveAttribute("href", "#group-availability");
+    expect(
+      within(workflowNav).getByRole("link", { name: "일정" }),
+    ).toHaveAttribute("href", "#upcoming-schedules");
+    expect(screen.getByText("내 프리셋")).toBeInTheDocument();
   });
 
   it("shows upcoming schedules on the calendar page", async () => {
