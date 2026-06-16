@@ -20,8 +20,9 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).not.toContain("ping: ${{ secrets.VPS_HOST }}");
     expect(workflow).toContain("Check VPS host reachability");
     expect(workflow).toContain(
-      'tailscale ping --c 1 --until-direct=false --timeout 5s "${VPS_HOST}"',
+      'if ping_output="$(tailscale ping --c 1 --timeout 5s "${VPS_HOST}" 2>&1)"; then',
     );
+    expect(workflow).toContain('grep -q "^pong from "');
     expect(workflow).toContain("VPS host did not respond on the tailnet");
     expect(workflow).toContain("steps.vps-host.outputs.reachable == 'true'");
     expect(workflow).toContain('tailscale ssh "${VPS_USER}@${VPS_HOST}"');
@@ -66,8 +67,9 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).not.toContain("ping: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("Check AWS host reachability");
     expect(workflow).toContain(
-      'tailscale ping --c 1 --until-direct=false --timeout 5s "${AWS_HOST}"',
+      'if ping_output="$(tailscale ping --c 1 --timeout 5s "${AWS_HOST}" 2>&1)"; then',
     );
+    expect(workflow).toContain('grep -q "^pong from "');
     expect(workflow).toContain("AWS host did not respond on the tailnet");
     expect(workflow).toContain(
       "steps.aws-host.outputs.reachable == 'true'",
