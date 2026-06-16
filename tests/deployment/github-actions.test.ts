@@ -60,7 +60,8 @@ describe("GitHub Actions VPS deployment workflow", () => {
     );
     expect(workflow).toContain("Validate AWS deploy secrets");
     expect(workflow).toContain("Missing AWS deploy secret");
-    expect(workflow).toContain("Skipping AWS deploy");
+    expect(workflow).toContain("AWS reachability check inconclusive");
+    expect(workflow).toContain("attempting deploy over tailscale ssh");
     expect(workflow).toContain("AWS_HOST: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("AWS_USER: ${{ secrets.AWS_USER }}");
     expect(workflow).toContain("AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}");

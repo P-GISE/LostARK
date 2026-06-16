@@ -204,8 +204,8 @@ jobs:
             exit 1
           fi
 
-          echo "::warning title=Skipping AWS deploy::AWS host did not respond on the tailnet"
-          echo "reachable=false" >> "${GITHUB_OUTPUT}"
+          echo "::warning title=AWS reachability check inconclusive::AWS host did not respond to tailscale ping; attempting deploy over tailscale ssh"
+          echo "reachable=true" >> "${GITHUB_OUTPUT}"
 
       - name: Deploy on AWS backup
         if: ${{ steps.aws-host.outputs.reachable == 'true' }}
