@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   "/",
   "/about",
   "/guides/raid-schedule",
+  "/guides/party-matching",
   "/privacy",
   "/contact",
 ] as const;

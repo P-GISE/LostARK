@@ -125,6 +125,10 @@ describe("AppShell", () => {
       "href",
       "/guides/raid-schedule",
     );
+    expect(publicNav.getByRole("link", { name: "편성 가이드" })).toHaveAttribute(
+      "href",
+      "/guides/party-matching",
+    );
     expect(publicNav.getByRole("link", { name: "개인정보" })).toHaveAttribute(
       "href",
       "/privacy",

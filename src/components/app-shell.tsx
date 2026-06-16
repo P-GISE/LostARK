@@ -28,6 +28,7 @@ const secondaryNavItems: AppNavItem[] = [
 const publicNavItems: AppNavItem[] = [
   { href: "/about", label: "소개" },
   { href: "/guides/raid-schedule", label: "일정 가이드" },
+  { href: "/guides/party-matching", label: "편성 가이드" },
   { href: "/privacy", label: "개인정보" },
   { href: "/contact", label: "문의" },
 ];

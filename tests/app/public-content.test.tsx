@@ -57,6 +57,7 @@ describe("public AdSense approval content", () => {
     const expectedPages = [
       ["src/app/about/page.tsx", "운영 원칙"],
       ["src/app/guides/raid-schedule/page.tsx", "레이드 일정 조율 가이드"],
+      ["src/app/guides/party-matching/page.tsx", "공대 편성 사용 가이드"],
       ["src/app/privacy/page.tsx", "Google 광고 서비스"],
       ["src/app/contact/page.tsx", "운영 문의"],
     ] as const;
@@ -80,6 +81,9 @@ describe("public AdSense approval content", () => {
       expect.arrayContaining([
         expect.objectContaining({
           url: "https://pigs0516.com/guides/raid-schedule",
+        }),
+        expect.objectContaining({
+          url: "https://pigs0516.com/guides/party-matching",
         }),
       ]),
     );
