@@ -191,7 +191,7 @@ export async function confirmRaidSetSchedule(input: {
               select: { id: true },
               where: {
                 groupId: raidSet.groupId,
-                slots: { some: { assignedMemberId: { in: memberIds } } },
+                slots: { some: { assignedMemberId: { in: [...memberIds] } } },
                 startsAt: { gte: scheduleHourStart, lt: scheduleHourEnd },
                 status: { not: "CANCELED" },
               },

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createGroupWithLeader } from "@/server/groups";
 import {
+  canConfirmSchedules,
   canManageSets,
+  requireCanConfirmSchedules,
   requireCanManageSets,
   updateMemberPermissions,
 } from "@/server/group-permissions";
@@ -20,9 +22,13 @@ describe("group permissions", () => {
       id: leader.id,
     });
     await expect(canManageSets(leader.id)).resolves.toBe(true);
+    await expect(requireCanConfirmSchedules(leader.id)).resolves.toMatchObject({
+      id: leader.id,
+    });
+    await expect(canConfirmSchedules(leader.id)).resolves.toBe(true);
   });
 
-  it("allows delegated members to manage sets", async () => {
+  it("allows delegated members to confirm schedules independently from set management", async () => {
     // Given
     const { group, leader } = await createGroupWithLeader({
       groupName: "위임 테스트 공대",
@@ -37,11 +43,15 @@ describe("group permissions", () => {
     await updateMemberPermissions({
       actorMemberId: leader.id,
       memberId: member.id,
-      permissions: { canManageSets: true },
+      permissions: { canConfirmSchedules: true },
     });
 
     // Then
-    await expect(canManageSets(member.id)).resolves.toBe(true);
+    await expect(canManageSets(member.id)).resolves.toBe(false);
+    await expect(canConfirmSchedules(member.id)).resolves.toBe(true);
+    await expect(requireCanConfirmSchedules(member.id)).resolves.toMatchObject({
+      id: member.id,
+    });
   });
 
   it("rejects normal members from managing sets", async () => {

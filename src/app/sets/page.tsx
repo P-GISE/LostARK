@@ -1,9 +1,16 @@
 import { revalidatePath } from "next/cache";
 import { SetBuilderBoard } from "@/components/set-builder/set-builder-board";
 import { PageHeader, pageShellClassName } from "@/components/ui";
-import { getLostArkWeekStartDate } from "@/lib/lostark-week";
+import { availabilityHours } from "@/lib/availability-hours";
+import {
+  buildLostArkWeekDays,
+  getLostArkWeekStartDate,
+} from "@/lib/lostark-week";
 import { requireCurrentMember } from "@/server/auth-context";
-import { canManageSets } from "@/server/group-permissions";
+import {
+  canConfirmSchedules,
+  canManageSets,
+} from "@/server/group-permissions";
 import { listMembers } from "@/server/members";
 import {
   assignRaidSetSlot,
@@ -11,8 +18,10 @@ import {
   unassignRaidSetSlot,
 } from "@/server/raid-set-slots";
 import {
+  confirmRaidSetSchedule,
   createRaidSetFromTemplate,
   deleteRaidSet,
+  getRaidSetTimeRecommendations,
   listRaidSetsForWeek,
 } from "@/server/raid-sets";
 import { listRaidTemplates } from "@/server/raid-templates";
@@ -24,14 +33,35 @@ function revalidateSetSurfaces() {
 }
 
 export default async function SetsPage() {
+  const now = new Date();
   const member = await requireCurrentMember({ loginRedirectPath: "/sets" });
-  const weekStartDate = getLostArkWeekStartDate();
-  const [templates, raidSets, members, canManageRaidSets] = await Promise.all([
+  const weekStartDate = getLostArkWeekStartDate(now);
+  const [
+    templates,
+    raidSets,
+    members,
+    canManageRaidSets,
+    canConfirmRaidSchedules,
+  ] = await Promise.all([
     listRaidTemplates(member.groupId),
     listRaidSetsForWeek(member.groupId, weekStartDate),
     listMembers(member.groupId),
     canManageSets(member.id),
+    canConfirmSchedules(member.id),
   ]);
+  const weekDates = buildLostArkWeekDays(now).map((day) => day.date);
+  const raidSetsWithRecommendations = await Promise.all(
+    raidSets.map(async (raidSet) => ({
+      ...raidSet,
+      timeRecommendations: await getRaidSetTimeRecommendations({
+        dates: weekDates,
+        hours: availabilityHours,
+        limit: 3,
+        now,
+        raidSetId: raidSet.id,
+      }),
+    })),
+  );
   const assignmentOptions = members.flatMap((groupMember) =>
     groupMember.characters.map((character) => ({
       characterId: character.id,
@@ -88,6 +118,18 @@ export default async function SetsPage() {
     revalidateSetSurfaces();
   }
 
+  async function confirmSetSchedule(formData: FormData) {
+    "use server";
+    const current = await requireCurrentMember();
+    await confirmRaidSetSchedule({
+      actorMemberId: current.id,
+      raidSetId: String(formData.get("raidSetId") ?? ""),
+      startsAt: String(formData.get("startsAt") ?? ""),
+    });
+    revalidateSetSurfaces();
+    revalidatePath("/schedules");
+  }
+
   async function deleteSet(formData: FormData) {
     "use server";
     const current = await requireCurrentMember();
@@ -108,12 +150,14 @@ export default async function SetsPage() {
       <SetBuilderBoard
         assignmentOptions={assignmentOptions}
         assignSlotAction={assignSetSlot}
+        canConfirmSchedules={canConfirmRaidSchedules}
         canManageSets={canManageRaidSets}
         clearSlotAction={clearSetSlot}
+        confirmScheduleAction={confirmSetSchedule}
         createSetAction={createSet}
         deleteSetAction={deleteSet}
         markAbsentAction={markSetSlotAbsent}
-        raidSets={raidSets}
+        raidSets={raidSetsWithRecommendations}
         templates={templates}
         weekStartDate={weekStartDate}
       />

@@ -42,6 +42,14 @@ export async function canManageSets(memberId: string) {
   return member.role === "LEADER" || member.permissions?.canManageSets === true;
 }
 
+export async function canConfirmSchedules(memberId: string) {
+  const member = await getMemberWithPermissions(memberId);
+  return (
+    member.role === "LEADER" ||
+    member.permissions?.canConfirmSchedules === true
+  );
+}
+
 export async function requireCanManageSets(memberId: string) {
   const member = await getMemberWithPermissions(memberId);
   if (member.role === "LEADER" || member.permissions?.canManageSets === true) {

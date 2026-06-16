@@ -25,8 +25,10 @@ type RaidTemplateOption = {
 export function SetBuilderBoard({
   assignmentOptions = [],
   assignSlotAction,
+  canConfirmSchedules = false,
   canManageSets = true,
   clearSlotAction,
+  confirmScheduleAction,
   createSetAction,
   deleteSetAction,
   markAbsentAction,
@@ -36,8 +38,10 @@ export function SetBuilderBoard({
 }: {
   readonly assignmentOptions?: readonly RaidSetAssignmentOption[];
   readonly assignSlotAction?: (formData: FormData) => Promise<void>;
+  readonly canConfirmSchedules?: boolean;
   readonly canManageSets?: boolean;
   readonly clearSlotAction?: (formData: FormData) => Promise<void>;
+  readonly confirmScheduleAction?: (formData: FormData) => Promise<void>;
   readonly createSetAction?: (formData: FormData) => Promise<void>;
   readonly deleteSetAction?: (formData: FormData) => Promise<void>;
   readonly markAbsentAction?: (formData: FormData) => Promise<void>;
@@ -94,8 +98,10 @@ export function SetBuilderBoard({
               <RaidSetCard
                 assignmentOptions={assignmentOptions}
                 assignSlotAction={assignSlotAction}
+                canConfirmSchedules={canConfirmSchedules}
                 canManageSets={canManageSets}
                 clearSlotAction={clearSlotAction}
+                confirmScheduleAction={confirmScheduleAction}
                 deleteAction={deleteSetAction}
                 key={raidSet.id}
                 markAbsentAction={markAbsentAction}

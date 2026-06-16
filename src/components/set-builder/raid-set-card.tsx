@@ -1,4 +1,8 @@
 import {
+  RaidSetRecommendations,
+  type RaidSetTimeRecommendationView,
+} from "@/components/set-builder/raid-set-recommendations";
+import {
   Badge,
   dangerButtonClassName,
   inputClassName,
@@ -6,6 +10,8 @@ import {
   selectClassName,
 } from "@/components/ui";
 import { formatRaidTemplateLabel } from "@/lib/raid-template-display";
+
+export type { RaidSetTimeRecommendationView };
 
 export type RaidSetSlotView = {
   readonly id: string;
@@ -30,6 +36,7 @@ export type RaidSetCardView = {
     readonly gates: string;
   };
   readonly slots: readonly RaidSetSlotView[];
+  readonly timeRecommendations?: readonly RaidSetTimeRecommendationView[];
 };
 
 export type RaidSetAssignmentOption = {
@@ -71,21 +78,26 @@ function assignmentOptionText(option: RaidSetAssignmentOption) {
 export function RaidSetCard({
   assignmentOptions = [],
   assignSlotAction,
+  canConfirmSchedules = false,
   canManageSets = false,
   clearSlotAction,
+  confirmScheduleAction,
   deleteAction,
   markAbsentAction,
   raidSet,
 }: {
   readonly assignmentOptions?: readonly RaidSetAssignmentOption[];
   readonly assignSlotAction?: (formData: FormData) => Promise<void>;
+  readonly canConfirmSchedules?: boolean;
   readonly canManageSets?: boolean;
   readonly clearSlotAction?: (formData: FormData) => Promise<void>;
+  readonly confirmScheduleAction?: (formData: FormData) => Promise<void>;
   readonly deleteAction?: (formData: FormData) => Promise<void>;
   readonly markAbsentAction?: (formData: FormData) => Promise<void>;
   readonly raidSet: RaidSetCardView;
 }) {
   const canAssignSlots = canManageSets && assignmentOptions.length > 0;
+  const timeRecommendations = raidSet.timeRecommendations ?? [];
 
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60">
@@ -199,6 +211,12 @@ export function RaidSetCard({
           ))
         )}
       </div>
+      <RaidSetRecommendations
+        canConfirm={canConfirmSchedules && raidSet.status === "DRAFT"}
+        confirmScheduleAction={confirmScheduleAction}
+        raidSetId={raidSet.id}
+        recommendations={timeRecommendations}
+      />
     </article>
   );
 }
