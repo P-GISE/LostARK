@@ -20,10 +20,14 @@ const primaryNavItems: AppNavItem[] = [
 const secondaryNavItems: AppNavItem[] = [
   { href: "/homework", label: "숙제" },
   { href: "/signup", label: "신청" },
-  { href: "/guides/party-matching", label: "편성 가이드" },
   { href: "/templates", label: "템플릿" },
   { href: "/notifications", label: "알림" },
   { href: "/members", label: "공대원" },
+];
+
+const helpNavItems: AppNavItem[] = [
+  { href: "/guides/party-matching", label: "편성 가이드" },
+  { href: "/guides/raid-schedule", label: "일정 가이드" },
 ];
 
 const publicNavItems: AppNavItem[] = [
@@ -37,21 +41,23 @@ const publicNavItems: AppNavItem[] = [
 function AccountMenu({
   groupName,
   secondaryItems,
+  helpItems,
   utilityItems,
 }: {
   groupName: string;
   secondaryItems: AppNavItem[];
+  helpItems: AppNavItem[];
   utilityItems: AppNavItem[];
 }) {
   return (
     <details
-      aria-label="계정 메뉴"
+      aria-label="더보기 메뉴"
       className="relative ml-auto"
     >
       <summary className="inline-flex h-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-900 [&::-webkit-details-marker]:hidden">
         더보기
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg shadow-slate-300/40">
+      <div className="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg shadow-slate-300/40">
         <div className="border-b border-slate-100 px-3 py-2">
           <div className="text-xs font-semibold text-slate-500">현재 공대</div>
           <div className="mt-0.5 truncate text-sm font-semibold text-slate-950">
@@ -61,8 +67,17 @@ function AccountMenu({
         <div className="grid gap-1 p-1 sm:hidden">
           <AppNavLinks items={secondaryItems} variant="menu" />
         </div>
+        <div className="grid gap-1 border-t border-slate-100 p-1">
+          <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
+            도움말
+          </div>
+          <AppNavLinks items={helpItems} variant="menu" />
+        </div>
         {utilityItems.length > 0 ? (
           <div className="grid gap-1 border-t border-slate-100 p-1">
+            <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
+              관리
+            </div>
             <AppNavLinks items={utilityItems} variant="menu" />
           </div>
         ) : null}
@@ -121,6 +136,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 <AccountMenu
                   groupName={member.group.name}
                   secondaryItems={secondaryNavItems}
+                  helpItems={helpNavItems}
                   utilityItems={utilityItems}
                 />
               </>

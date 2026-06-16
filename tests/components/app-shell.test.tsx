@@ -69,10 +69,6 @@ describe("AppShell", () => {
       "href",
       "/signup",
     );
-    expect(secondaryNav.getByRole("link", { name: "편성 가이드" })).toHaveAttribute(
-      "href",
-      "/guides/party-matching",
-    );
     expect(secondaryNav.getByRole("link", { name: "템플릿" })).toHaveAttribute(
       "href",
       "/templates",
@@ -85,11 +81,18 @@ describe("AppShell", () => {
       "href",
       "/members",
     );
+    expect(
+      secondaryNav.queryByRole("link", { name: "편성 가이드" }),
+    ).not.toBeInTheDocument();
 
-    const accountMenu = within(screen.getByLabelText("계정 메뉴"));
+    const accountMenu = within(screen.getByLabelText("더보기 메뉴"));
     expect(accountMenu.getByRole("link", { name: "편성 가이드" })).toHaveAttribute(
       "href",
       "/guides/party-matching",
+    );
+    expect(accountMenu.getByRole("link", { name: "일정 가이드" })).toHaveAttribute(
+      "href",
+      "/guides/raid-schedule",
     );
     expect(accountMenu.getByRole("link", { name: "공대 설정" })).toHaveAttribute(
       "href",
@@ -109,7 +112,7 @@ describe("AppShell", () => {
     render(await AppShell({ children: <main>본문</main> }));
 
     expect(
-      within(screen.getByLabelText("계정 메뉴")).queryByRole("link", {
+      within(screen.getByLabelText("더보기 메뉴")).queryByRole("link", {
         name: "공대 설정",
       }),
     ).not.toBeInTheDocument();
@@ -238,7 +241,7 @@ describe("AppShell", () => {
     render(await AppShell({ children: <main>Admin body</main> }));
 
     expect(
-      within(screen.getByLabelText("계정 메뉴")).getByRole("link", {
+      within(screen.getByLabelText("더보기 메뉴")).getByRole("link", {
         name: "관리자",
       }),
     ).toHaveAttribute(
