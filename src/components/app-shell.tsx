@@ -20,6 +20,7 @@ const primaryNavItems: AppNavItem[] = [
 const secondaryNavItems: AppNavItem[] = [
   { href: "/homework", label: "숙제" },
   { href: "/signup", label: "신청" },
+  { href: "/guides/party-matching", label: "편성 가이드" },
   { href: "/templates", label: "템플릿" },
   { href: "/notifications", label: "알림" },
   { href: "/members", label: "공대원" },

@@ -69,6 +69,10 @@ describe("AppShell", () => {
       "href",
       "/signup",
     );
+    expect(secondaryNav.getByRole("link", { name: "편성 가이드" })).toHaveAttribute(
+      "href",
+      "/guides/party-matching",
+    );
     expect(secondaryNav.getByRole("link", { name: "템플릿" })).toHaveAttribute(
       "href",
       "/templates",
@@ -83,6 +87,10 @@ describe("AppShell", () => {
     );
 
     const accountMenu = within(screen.getByLabelText("계정 메뉴"));
+    expect(accountMenu.getByRole("link", { name: "편성 가이드" })).toHaveAttribute(
+      "href",
+      "/guides/party-matching",
+    );
     expect(accountMenu.getByRole("link", { name: "공대 설정" })).toHaveAttribute(
       "href",
       "/settings",
