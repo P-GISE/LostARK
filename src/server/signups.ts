@@ -1,6 +1,7 @@
 import { compareRaidTemplateDisplay } from "@/lib/raid-template-display";
 import { db } from "@/server/db";
 import { requireCanManageSets } from "@/server/group-permissions";
+import { groupEntriesByAvailability } from "@/server/party-time-matching";
 
 export class RaidSignupError extends Error {
   readonly name = "RaidSignupError";
@@ -159,22 +160,20 @@ export async function assignRaidSignup(input: {
   if (signup.status !== "OPEN") {
     throw new RaidSignupError("열려 있는 신청만 배정할 수 있습니다");
   }
-  const fullPartyCount = Math.min(
-    Math.floor(entries.length / signup.partySize),
-    signup.maxParties,
-  );
-  if (fullPartyCount < 1) {
+  const parties = await groupEntriesByAvailability({
+    entries,
+    maxParties: signup.maxParties,
+    partySize: signup.partySize,
+    weekStartDate: signup.weekStartDate,
+  });
+  if (parties.length < 1) {
     throw new RaidSignupError("배정할 신청 인원이 부족합니다");
   }
 
   return db.$transaction(async (tx) => {
     const createdSetIds: string[] = [];
 
-    for (let partyIndex = 0; partyIndex < fullPartyCount; partyIndex += 1) {
-      const partyEntries = entries.slice(
-        partyIndex * signup.partySize,
-        partyIndex * signup.partySize + signup.partySize,
-      );
+    for (const [partyIndex, partyEntries] of parties.entries()) {
       const raidSet = await tx.raidSet.create({
         data: {
           createdByMemberId: actor.id,
