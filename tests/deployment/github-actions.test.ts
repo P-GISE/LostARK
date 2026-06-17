@@ -90,7 +90,7 @@ describe("GitHub Actions VPS deployment workflow", () => {
       'sudo -n env AWS_APP_DIR=\'${AWS_APP_DIR}\' bash -s',
     );
     expect(workflow).toContain(
-      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
+      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
     );
     expect(workflow).toContain('cd "${AWS_APP_DIR}"');
     expect(workflow).toContain("COMPOSE_BAKE=false bash scripts/vps-deploy.sh");
@@ -125,6 +125,8 @@ describe("GitHub Actions AWS bootstrap workflow", () => {
       'ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true',
     );
     expect(bootstrapWorkflow).toContain("StrictHostKeyChecking=accept-new");
+    expect(bootstrapWorkflow).toContain("ServerAliveInterval=30");
+    expect(bootstrapWorkflow).toContain("ServerAliveCountMax=20");
     expect(bootstrapWorkflow).toContain('TAILSCALE_HOSTNAME="lostark-party-aws"');
     expect(bootstrapWorkflow).toContain("scripts/vps-bootstrap.sh");
     expect(bootstrapWorkflow).toContain("scripts/vps-deploy.sh");
