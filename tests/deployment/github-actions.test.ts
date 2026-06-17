@@ -107,7 +107,7 @@ describe("GitHub Actions VPS deployment workflow", () => {
       'sudo -n env AWS_APP_DIR=\'${AWS_APP_DIR}\' bash -s',
     );
     expect(workflow).toContain(
-      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_USER}@${AWS_TAILSCALE_IP}"',
+      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_TAILSCALE_IP}"',
     );
     expect(workflow).toContain(
       'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
