@@ -257,6 +257,18 @@ jobs:
 
           if ! tailscale ssh "${AWS_USER}@${AWS_HOST}" "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
             echo "::warning title=AWS Tailscale SSH failed::retrying over public SSH"
-            ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
-              "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"
+            for attempt in $(seq 1 5); do
+              if ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
+                "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
+                exit 0
+              fi
+
+              status="$?"
+              if [ "${status}" -ne 255 ] || [ "${attempt}" -eq 5 ]; then
+                exit "${status}"
+              fi
+
+              echo "::warning title=AWS public SSH retry::attempt ${attempt} failed; retrying"
+              sleep 20
+            done
           fi

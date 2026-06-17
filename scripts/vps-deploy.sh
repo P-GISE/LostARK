@@ -63,8 +63,10 @@ if [ "$(env_value "POSTGRES_PASSWORD")" = "lostark" ]; then
   exit 1
 fi
 
-echo "Pruning Docker build cache before rebuild..."
-docker_cli builder prune -af
+if [ "${PRUNE_DOCKER_CACHE:-false}" = "true" ]; then
+  echo "Pruning Docker build cache before rebuild..."
+  docker_cli builder prune -af
+fi
 
 docker_cli build -t lostark-party-app:latest .
 docker_compose -f docker-compose.vps.yml --env-file "${ENV_FILE}" up -d

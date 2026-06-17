@@ -28,6 +28,7 @@ describe("VPS helper scripts", () => {
     expect(script).toContain("sudo -n docker info");
     expect(script).toContain('sudo -n docker "$@"');
     expect(script).toContain('docker_cli compose "$@"');
+    expect(script).toContain('if [ "${PRUNE_DOCKER_CACHE:-false}" = "true" ]; then');
     expect(script).toContain("docker_cli builder prune -af");
     expect(script).toContain("docker_cli build -t lostark-party-app:latest .");
     expect(script).toContain(

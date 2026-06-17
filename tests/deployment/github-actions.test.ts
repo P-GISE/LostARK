@@ -92,6 +92,8 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain(
       'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
     );
+    expect(workflow).toContain("AWS public SSH retry");
+    expect(workflow).toContain('if [ "${status}" -ne 255 ] || [ "${attempt}" -eq 5 ]; then');
     expect(workflow).toContain('cd "${AWS_APP_DIR}"');
     expect(workflow).toContain("COMPOSE_BAKE=false bash scripts/vps-deploy.sh");
     expect(workflow).toContain("for attempt in $(seq 1 24); do");
