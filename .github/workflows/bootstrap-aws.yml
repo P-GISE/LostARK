@@ -72,7 +72,7 @@ jobs:
           AWS_CLOUDFLARED_TOKEN: ${{ secrets.AWS_CLOUDFLARED_TOKEN }}
           TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
         run: |
-          ssh -i ~/.ssh/aws-bootstrap.pem -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
+          ssh -i ~/.ssh/aws-bootstrap.pem -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
             "AWS_CLOUDFLARED_TOKEN='${AWS_CLOUDFLARED_TOKEN}' TS_AUTHKEY='${TS_AUTHKEY}' bash -s" <<'REMOTE'
               set -euo pipefail
               sudo apt-get update
