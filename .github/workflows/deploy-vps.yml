@@ -255,8 +255,8 @@ jobs:
             sudo -n systemctl restart cloudflared
           REMOTE
 
-          if ! tailscale ssh "${AWS_USER}@${AWS_HOST}" "AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
+          if ! tailscale ssh "${AWS_USER}@${AWS_HOST}" "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
             echo "::warning title=AWS Tailscale SSH failed::retrying over public SSH"
             ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
-              "AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"
+              "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"
           fi

@@ -87,6 +87,9 @@ describe("GitHub Actions VPS deployment workflow", () => {
     );
     expect(workflow).toContain("AWS Tailscale SSH failed");
     expect(workflow).toContain(
+      'sudo -n env AWS_APP_DIR=\'${AWS_APP_DIR}\' bash -s',
+    );
+    expect(workflow).toContain(
       'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
     );
     expect(workflow).toContain('cd "${AWS_APP_DIR}"');
