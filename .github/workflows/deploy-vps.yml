@@ -152,9 +152,12 @@ jobs:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
           AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
+          AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
         run: |
           missing=0
-          for key in TS_AUTHKEY AWS_HOST AWS_USER AWS_APP_DIR; do
+          for key in TS_AUTHKEY AWS_HOST AWS_USER AWS_APP_DIR AWS_BOOTSTRAP_HOST AWS_BOOTSTRAP_USER AWS_BOOTSTRAP_SSH_KEY; do
             if [ -z "${!key}" ]; then
               if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
                 echo "::error title=Missing AWS deploy secret::${key} is not configured"
@@ -207,14 +210,29 @@ jobs:
           echo "::warning title=AWS reachability check inconclusive::AWS host did not respond to tailscale ping; attempting deploy over tailscale ssh"
           echo "reachable=true" >> "${GITHUB_OUTPUT}"
 
+      - name: Prepare AWS fallback SSH
+        if: ${{ steps.aws-host.outputs.reachable == 'true' }}
+        env:
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${AWS_BOOTSTRAP_SSH_KEY}" > ~/.ssh/aws-deploy.pem
+          chmod 600 ~/.ssh/aws-deploy.pem
+          ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true
+
       - name: Deploy on AWS backup
         if: ${{ steps.aws-host.outputs.reachable == 'true' }}
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
           AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}
+          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
         run: |
-          tailscale ssh "${AWS_USER}@${AWS_HOST}" "AWS_APP_DIR='${AWS_APP_DIR}' bash -s" <<'REMOTE'
+          remote_script="$(mktemp)"
+          trap 'rm -f "${remote_script}"' EXIT
+          cat > "${remote_script}" <<'REMOTE'
             set -euo pipefail
             git config --global --add safe.directory "${AWS_APP_DIR}" || true
             cd "${AWS_APP_DIR}"
@@ -236,3 +254,9 @@ jobs:
             sudo -n systemctl enable cloudflared
             sudo -n systemctl restart cloudflared
           REMOTE
+
+          if ! tailscale ssh "${AWS_USER}@${AWS_HOST}" "AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
+            echo "::warning title=AWS Tailscale SSH failed::retrying over public SSH"
+            ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
+              "AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"
+          fi

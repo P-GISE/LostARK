@@ -65,6 +65,11 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("AWS_HOST: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("AWS_USER: ${{ secrets.AWS_USER }}");
     expect(workflow).toContain("AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}");
+    expect(workflow).toContain("AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}");
+    expect(workflow).toContain("AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}");
+    expect(workflow).toContain(
+      "AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}",
+    );
     expect(workflow).not.toContain("ping: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("Check AWS host reachability");
     expect(workflow).toContain(
@@ -76,6 +81,14 @@ describe("GitHub Actions VPS deployment workflow", () => {
       "steps.aws-host.outputs.reachable == 'true'",
     );
     expect(workflow).toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
+    expect(workflow).toContain("Prepare AWS fallback SSH");
+    expect(workflow).toContain(
+      'ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true',
+    );
+    expect(workflow).toContain("AWS Tailscale SSH failed");
+    expect(workflow).toContain(
+      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
+    );
     expect(workflow).toContain('cd "${AWS_APP_DIR}"');
     expect(workflow).toContain("COMPOSE_BAKE=false bash scripts/vps-deploy.sh");
     expect(workflow).toContain("for attempt in $(seq 1 24); do");
