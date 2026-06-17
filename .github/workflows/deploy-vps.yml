@@ -144,6 +144,8 @@ jobs:
     needs: [test, deploy]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.test.result == 'success' && (github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all') && (github.event_name != 'push' || needs.deploy.result == 'success') }}
+    env:
+      AWS_TAILSCALE_HOST: lostark-party-aws
     steps:
       - name: Validate AWS deploy secrets
         id: aws-secrets
@@ -190,17 +192,19 @@ jobs:
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
         run: |
-          if ping_output="$(tailscale ping --c 1 --timeout 5s "${AWS_HOST}" 2>&1)"; then
+          for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do
+            if ping_output="$(tailscale ping --c 1 --timeout 5s "${host}" 2>&1)"; then
+              printf '%s\n' "${ping_output}"
+              echo "reachable=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
             printf '%s\n' "${ping_output}"
-            echo "reachable=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          printf '%s\n' "${ping_output}"
 
-          if printf '%s\n' "${ping_output}" | grep -q "^pong from "; then
-            echo "reachable=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
+            if printf '%s\n' "${ping_output}" | grep -q "^pong from "; then
+              echo "reachable=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          done
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             echo "::error title=AWS host offline::AWS host did not respond on the tailnet"
@@ -220,8 +224,16 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "${AWS_BOOTSTRAP_SSH_KEY}" > ~/.ssh/aws-deploy.pem
           chmod 600 ~/.ssh/aws-deploy.pem
-          AWS_TAILSCALE_IP="$(tailscale ip -4 "${AWS_HOST}" | head -n 1)"
-          if [ -z "${AWS_TAILSCALE_IP}" ]; then
+          resolve_aws_tailscale_ip() {
+            for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do
+              if ip="$(tailscale ip -4 "${host}" 2>/dev/null | head -n 1)" && [ -n "${ip}" ]; then
+                printf '%s\n' "${ip}"
+                return 0
+              fi
+            done
+            return 1
+          }
+          if ! AWS_TAILSCALE_IP="$(resolve_aws_tailscale_ip)"; then
             echo "::error title=AWS Tailscale IP unavailable::Could not resolve AWS_HOST on the tailnet"
             exit 1
           fi
@@ -262,8 +274,17 @@ jobs:
             sudo -n systemctl restart cloudflared
           REMOTE
 
-          AWS_TAILSCALE_IP="$(tailscale ip -4 "${AWS_HOST}" | head -n 1)"
-          if [ -z "${AWS_TAILSCALE_IP}" ]; then
+          resolve_aws_tailscale_ip() {
+            for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do
+              if ip="$(tailscale ip -4 "${host}" 2>/dev/null | head -n 1)" && [ -n "${ip}" ]; then
+                printf '%s\n' "${ip}"
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          if ! AWS_TAILSCALE_IP="$(resolve_aws_tailscale_ip)"; then
             echo "::warning title=AWS private SSH failed::could not resolve AWS_HOST on the tailnet"
             status=255
           elif ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_USER}@${AWS_TAILSCALE_IP}" \

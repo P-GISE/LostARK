@@ -55,6 +55,7 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("- all");
     expect(workflow).toContain("deploy-aws:");
     expect(workflow).toContain("needs: [test, deploy]");
+    expect(workflow).toContain("AWS_TAILSCALE_HOST: lostark-party-aws");
     expect(workflow).toContain(
       "${{ always() && needs.test.result == 'success' && (github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all') && (github.event_name != 'push' || needs.deploy.result == 'success') }}",
     );
@@ -73,7 +74,10 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).not.toContain("ping: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("Check AWS host reachability");
     expect(workflow).toContain(
-      'if ping_output="$(tailscale ping --c 1 --timeout 5s "${AWS_HOST}" 2>&1)"; then',
+      'for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do',
+    );
+    expect(workflow).toContain(
+      'if ping_output="$(tailscale ping --c 1 --timeout 5s "${host}" 2>&1)"; then',
     );
     expect(workflow).toContain('grep -q "^pong from "');
     expect(workflow).toContain("AWS host did not respond on the tailnet");
@@ -83,7 +87,13 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).not.toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
     expect(workflow).toContain("Prepare AWS SSH key");
     expect(workflow).toContain(
-      'AWS_TAILSCALE_IP="$(tailscale ip -4 "${AWS_HOST}" | head -n 1)"',
+      'resolve_aws_tailscale_ip()',
+    );
+    expect(workflow).toContain(
+      'for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do',
+    );
+    expect(workflow).toContain(
+      'ip="$(tailscale ip -4 "${host}" 2>/dev/null | head -n 1)"',
     );
     expect(workflow).toContain("AWS Tailscale IP unavailable");
     expect(workflow).toContain(
