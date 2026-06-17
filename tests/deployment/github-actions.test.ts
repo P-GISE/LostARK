@@ -61,7 +61,7 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("Validate AWS deploy secrets");
     expect(workflow).toContain("Missing AWS deploy secret");
     expect(workflow).toContain("AWS reachability check inconclusive");
-    expect(workflow).toContain("attempting deploy over tailscale ssh");
+    expect(workflow).toContain("attempting deploy over private SSH");
     expect(workflow).toContain("AWS_HOST: ${{ secrets.AWS_HOST }}");
     expect(workflow).toContain("AWS_USER: ${{ secrets.AWS_USER }}");
     expect(workflow).toContain("AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}");
@@ -80,14 +80,24 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain(
       "steps.aws-host.outputs.reachable == 'true'",
     );
-    expect(workflow).toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
-    expect(workflow).toContain("Prepare AWS fallback SSH");
+    expect(workflow).not.toContain('tailscale ssh "${AWS_USER}@${AWS_HOST}"');
+    expect(workflow).toContain("Prepare AWS SSH key");
+    expect(workflow).toContain(
+      'AWS_TAILSCALE_IP="$(tailscale ip -4 "${AWS_HOST}" | head -n 1)"',
+    );
+    expect(workflow).toContain("AWS Tailscale IP unavailable");
+    expect(workflow).toContain(
+      'ssh-keyscan -H "${AWS_TAILSCALE_IP}" >> ~/.ssh/known_hosts || true',
+    );
     expect(workflow).toContain(
       'ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true',
     );
-    expect(workflow).toContain("AWS Tailscale SSH failed");
+    expect(workflow).toContain("AWS private SSH failed");
     expect(workflow).toContain(
       'sudo -n env AWS_APP_DIR=\'${AWS_APP_DIR}\' bash -s',
+    );
+    expect(workflow).toContain(
+      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_USER}@${AWS_TAILSCALE_IP}"',
     );
     expect(workflow).toContain(
       'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
@@ -130,6 +140,7 @@ describe("GitHub Actions AWS bootstrap workflow", () => {
     expect(bootstrapWorkflow).toContain("ServerAliveInterval=30");
     expect(bootstrapWorkflow).toContain("ServerAliveCountMax=20");
     expect(bootstrapWorkflow).toContain('TAILSCALE_HOSTNAME="lostark-party-aws"');
+    expect(bootstrapWorkflow).toContain("TAILSCALE_SSH=false");
     expect(bootstrapWorkflow).toContain("scripts/vps-bootstrap.sh");
     expect(bootstrapWorkflow).toContain("scripts/vps-deploy.sh");
     expect(bootstrapWorkflow).toContain("cloudflared service install");

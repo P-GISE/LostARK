@@ -12,6 +12,8 @@ describe("VPS helper scripts", () => {
     expect(script).toContain("set -euo pipefail");
     expect(script).toContain("docker-ce");
     expect(script).toContain("tailscale.com/install.sh");
+    expect(script).toContain('TAILSCALE_SSH="${TAILSCALE_SSH:-true}"');
+    expect(script).toContain("tailscale_ssh_args=(--ssh)");
     expect(script).toContain("--hostname \"${TAILSCALE_HOSTNAME}\"");
   });
 

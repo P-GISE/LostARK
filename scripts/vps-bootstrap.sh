@@ -2,6 +2,7 @@
 set -euo pipefail
 
 TAILSCALE_HOSTNAME="${TAILSCALE_HOSTNAME:-lostark-party}"
+TAILSCALE_SSH="${TAILSCALE_SSH:-true}"
 
 if ! command -v apt-get >/dev/null 2>&1; then
   echo "This bootstrap script expects an Ubuntu/Debian VPS with apt-get." >&2
@@ -38,11 +39,19 @@ fi
 
 sudo systemctl enable --now tailscaled
 
+if [ "${TAILSCALE_SSH}" = "true" ]; then
+  tailscale_ssh_args=(--ssh)
+else
+  tailscale_ssh_args=(--ssh=false --accept-risk=lose-ssh)
+fi
+
 if [ -n "${TAILSCALE_AUTHKEY:-}" ]; then
-  sudo tailscale up --auth-key "${TAILSCALE_AUTHKEY}" --ssh --hostname "${TAILSCALE_HOSTNAME}"
+  sudo tailscale up --auth-key "${TAILSCALE_AUTHKEY}" "${tailscale_ssh_args[@]}" --hostname "${TAILSCALE_HOSTNAME}"
 else
   echo "Run this on the VPS to join the tailnet:"
-  echo "sudo tailscale up --ssh --hostname \"${TAILSCALE_HOSTNAME}\""
+  printf 'sudo tailscale up'
+  printf ' %q' "${tailscale_ssh_args[@]}"
+  printf ' --hostname %q\n' "${TAILSCALE_HOSTNAME}"
 fi
 
 echo "Bootstrap finished. Reconnect SSH once if your user was added to the docker group."

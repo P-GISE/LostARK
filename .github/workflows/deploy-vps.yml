@@ -207,18 +207,25 @@ jobs:
             exit 1
           fi
 
-          echo "::warning title=AWS reachability check inconclusive::AWS host did not respond to tailscale ping; attempting deploy over tailscale ssh"
+          echo "::warning title=AWS reachability check inconclusive::AWS host did not respond to tailscale ping; attempting deploy over private SSH"
           echo "reachable=true" >> "${GITHUB_OUTPUT}"
 
-      - name: Prepare AWS fallback SSH
+      - name: Prepare AWS SSH key
         if: ${{ steps.aws-host.outputs.reachable == 'true' }}
         env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
           AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "${AWS_BOOTSTRAP_SSH_KEY}" > ~/.ssh/aws-deploy.pem
           chmod 600 ~/.ssh/aws-deploy.pem
+          AWS_TAILSCALE_IP="$(tailscale ip -4 "${AWS_HOST}" | head -n 1)"
+          if [ -z "${AWS_TAILSCALE_IP}" ]; then
+            echo "::error title=AWS Tailscale IP unavailable::Could not resolve AWS_HOST on the tailnet"
+            exit 1
+          fi
+          ssh-keyscan -H "${AWS_TAILSCALE_IP}" >> ~/.ssh/known_hosts || true
           ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true
 
       - name: Deploy on AWS backup
@@ -255,20 +262,33 @@ jobs:
             sudo -n systemctl restart cloudflared
           REMOTE
 
-          if ! tailscale ssh "${AWS_USER}@${AWS_HOST}" "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
-            echo "::warning title=AWS Tailscale SSH failed::retrying over public SSH"
-            for attempt in $(seq 1 5); do
-              if ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
-                "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
-                exit 0
-              fi
-
-              status="$?"
-              if [ "${status}" -ne 255 ] || [ "${attempt}" -eq 5 ]; then
-                exit "${status}"
-              fi
-
-              echo "::warning title=AWS public SSH retry::attempt ${attempt} failed; retrying"
-              sleep 20
-            done
+          AWS_TAILSCALE_IP="$(tailscale ip -4 "${AWS_HOST}" | head -n 1)"
+          if [ -z "${AWS_TAILSCALE_IP}" ]; then
+            echo "::warning title=AWS private SSH failed::could not resolve AWS_HOST on the tailnet"
+            status=255
+          elif ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_USER}@${AWS_TAILSCALE_IP}" \
+            "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
+            exit 0
+          else
+            status="$?"
           fi
+
+          echo "::warning title=AWS private SSH failed::retrying over public SSH"
+          if [ "${status}" -ne 255 ]; then
+            exit "${status}"
+          fi
+
+          for attempt in $(seq 1 5); do
+            if ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
+              "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
+              exit 0
+            fi
+
+            status="$?"
+            if [ "${status}" -ne 255 ] || [ "${attempt}" -eq 5 ]; then
+              exit "${status}"
+            fi
+
+            echo "::warning title=AWS public SSH retry::attempt ${attempt} failed; retrying"
+            sleep 20
+          done

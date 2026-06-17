@@ -89,7 +89,7 @@ jobs:
               sudo install -m 600 -o root -g root /tmp/lostark-party.env /opt/lostark-party/.env
               rm -f /tmp/lostark-party.env
 
-              sudo env TAILSCALE_AUTHKEY="${TS_AUTHKEY}" TAILSCALE_HOSTNAME="lostark-party-aws" bash /opt/lostark-party/scripts/vps-bootstrap.sh
+              sudo env TAILSCALE_AUTHKEY="${TS_AUTHKEY}" TAILSCALE_HOSTNAME="lostark-party-aws" TAILSCALE_SSH=false bash /opt/lostark-party/scripts/vps-bootstrap.sh
 
               if ! command -v cloudflared >/dev/null 2>&1; then
                 curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
