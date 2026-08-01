@@ -21,13 +21,23 @@ type PresetView = {
 };
 
 export function AvailabilityPresetsPanel({
+  applyPresetAction,
   createPresetAction,
+  deletePresetAction,
   presets,
+  renamePresetAction,
+  saveCurrentWeekAsPresetAction,
   saveOverrideAction,
+  weekStartDate = "2026-06-04",
 }: {
+  readonly applyPresetAction?: (formData: FormData) => Promise<void>;
   readonly createPresetAction?: (formData: FormData) => Promise<void>;
+  readonly deletePresetAction?: (formData: FormData) => Promise<void>;
   readonly presets: readonly PresetView[];
+  readonly renamePresetAction?: (formData: FormData) => Promise<void>;
+  readonly saveCurrentWeekAsPresetAction?: (formData: FormData) => Promise<void>;
   readonly saveOverrideAction?: (formData: FormData) => Promise<void>;
+  readonly weekStartDate?: string;
 }) {
   return (
     <SectionPanel className="availability-panel mt-5" title="내 프리셋">
@@ -55,6 +65,29 @@ export function AvailabilityPresetsPanel({
                     </span>
                   ))}
                 </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                  <form action={renamePresetAction} className="grid gap-1">
+                    <input name="presetId" type="hidden" value={preset.id} />
+                    <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                      이름
+                      <input
+                        className={inputClassName}
+                        defaultValue={preset.name}
+                        name="name"
+                      />
+                    </label>
+                    <button className={secondaryButtonClassName}>이름 변경</button>
+                  </form>
+                  <form action={applyPresetAction}>
+                    <input name="presetId" type="hidden" value={preset.id} />
+                    <input name="weekStartDate" type="hidden" value={weekStartDate} />
+                    <button className={secondaryButtonClassName}>이번 주 적용</button>
+                  </form>
+                  <form action={deletePresetAction}>
+                    <input name="presetId" type="hidden" value={preset.id} />
+                    <button className={secondaryButtonClassName}>삭제</button>
+                  </form>
+                </div>
               </div>
             ))
           )}
@@ -79,11 +112,20 @@ export function AvailabilityPresetsPanel({
             <input name="dayOfWeek" type="hidden" value="5" />
             <input name="startTime" type="hidden" value="21:00" />
             <input name="endTime" type="hidden" value="23:00" />
+            <input name="weekStartDate" type="hidden" value={weekStartDate} />
             <button className={secondaryButtonClassName}>예외로 저장</button>
-            <button className={secondaryButtonClassName} type="button">
-              기본값 저장
-            </button>
-            <button className={secondaryButtonClassName} type="button">
+          </form>
+          <form action={saveCurrentWeekAsPresetAction} className="grid gap-2">
+            <input name="weekStartDate" type="hidden" value={weekStartDate} />
+            <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+              저장 이름
+              <input
+                className={inputClassName}
+                defaultValue="이번 주 가능 시간"
+                name="name"
+              />
+            </label>
+            <button className={secondaryButtonClassName}>
               이 주 설정을 프리셋으로 저장
             </button>
           </form>

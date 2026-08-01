@@ -28,8 +28,12 @@ export function isSafeTestDatabaseUrl(value: string | undefined) {
   }
 }
 
+type TestDatabaseEnv = {
+  [key: string]: string | undefined;
+};
+
 export function configureSafeTestDatabaseUrl(
-  env: NodeJS.ProcessEnv = process.env,
+  env: TestDatabaseEnv = process.env,
 ) {
   const explicitTestDatabaseUrl = env.TEST_DATABASE_URL?.trim();
   if (explicitTestDatabaseUrl) {

@@ -4,11 +4,15 @@ import CalendarPage from "@/app/calendar/page";
 
 const mocks = vi.hoisted(() => ({
   deleteStaleAvailabilityBlocksForGroup: vi.fn(),
+  applyAvailabilityPresetToWeek: vi.fn(),
   createAvailabilityPreset: vi.fn(),
+  createAvailabilityPresetFromWeek: vi.fn(),
+  deleteAvailabilityPreset: vi.fn(),
   getGroupAvailabilityOverview: vi.fn(),
   listAvailabilityPresets: vi.fn(),
   listAvailabilityForMember: vi.fn(),
   listUpcomingSchedules: vi.fn(),
+  renameAvailabilityPreset: vi.fn(),
   requireCurrentMember: vi.fn(),
   saveAvailabilityWeekOverride: vi.fn(),
 }));
@@ -51,8 +55,12 @@ vi.mock("@/server/availability-reset", () => ({
 }));
 
 vi.mock("@/server/availability-presets", () => ({
+  applyAvailabilityPresetToWeek: mocks.applyAvailabilityPresetToWeek,
   createAvailabilityPreset: mocks.createAvailabilityPreset,
+  createAvailabilityPresetFromWeek: mocks.createAvailabilityPresetFromWeek,
+  deleteAvailabilityPreset: mocks.deleteAvailabilityPreset,
   listAvailabilityPresets: mocks.listAvailabilityPresets,
+  renameAvailabilityPreset: mocks.renameAvailabilityPreset,
   saveAvailabilityWeekOverride: mocks.saveAvailabilityWeekOverride,
 }));
 
@@ -132,6 +140,15 @@ describe("CalendarPage", () => {
   });
 
   it("renders a compact availability workflow command bar", async () => {
+    mocks.listAvailabilityPresets.mockResolvedValue([
+      {
+        id: "preset-1",
+        mode: "WEEKLY",
+        name: "평일 저녁",
+        slots: [{ endTime: "23:00", id: "slot-1", startTime: "20:00" }],
+      },
+    ]);
+
     render(await CalendarPage());
 
     const workflowNav = screen.getByRole("navigation", {
@@ -149,6 +166,10 @@ describe("CalendarPage", () => {
       within(workflowNav).getByRole("link", { name: "일정" }),
     ).toHaveAttribute("href", "#upcoming-schedules");
     expect(screen.getByText("내 프리셋")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "이번 주 적용" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "이 주 설정을 프리셋으로 저장" }),
+    ).toBeInTheDocument();
   });
 
   it("shows upcoming schedules on the calendar page", async () => {

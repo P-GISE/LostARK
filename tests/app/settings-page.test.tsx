@@ -67,7 +67,10 @@ describe("SettingsPage", () => {
       availabilityChangeNoticeEnabled: true,
       dailyDiscordSummaryEnabled: true,
       dailyDiscordSummaryTime: "09:30",
+      discordAnnouncementChannelId: "789",
       discordChannelId: "123",
+      discordGuildId: "456",
+      discordRecruitmentChannelId: "567",
       raidReminderLeadMinutes: 60,
       timetableEndHour: 4,
       timetableStartHour: 8,
@@ -106,5 +109,8 @@ describe("SettingsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "멤버 권한" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "활동 기록" })).toBeInTheDocument();
+    expect(screen.getByLabelText("디스코드 서버 ID")).toHaveValue("456");
+    expect(screen.getByLabelText("모집 채널 ID")).toHaveValue("567");
+    expect(screen.getByLabelText("공지 채널 ID")).toHaveValue("789");
   });
 });

@@ -17,6 +17,7 @@ import { requireCurrentMember } from "@/server/auth-context";
 import { listCharactersForMember } from "@/server/characters";
 import { canManageSets } from "@/server/group-permissions";
 import { listRaidTemplates } from "@/server/raid-templates";
+import { buildSignupReadiness } from "@/server/readiness";
 import {
   applyToRaidSignup,
   assignRaidSignup,
@@ -37,6 +38,19 @@ export default async function SignupPage() {
     canManageSets(member.id),
   ]);
   const sortedTemplates = [...templates].sort(compareRaidTemplateDisplay);
+  const readinessEntries = await Promise.all(
+    signups.map((signup) => buildSignupReadiness(signup.id)),
+  );
+  const readinessByEntryId = new Map(
+    readinessEntries.flat().map((entry) => [entry.entryId, entry]),
+  );
+  const signupsWithReadiness = signups.map((signup) => ({
+    ...signup,
+    entries: signup.entries.map((entry) => ({
+      ...entry,
+      readiness: readinessByEntryId.get(entry.id),
+    })),
+  }));
 
   async function applySignup(formData: FormData) {
     "use server";
@@ -180,7 +194,7 @@ export default async function SignupPage() {
         characters={characters}
         currentMemberId={member.id}
         finalizeAction={finalizeSignup}
-        signups={signups}
+        signups={signupsWithReadiness}
       />
     </main>
   );

@@ -214,6 +214,9 @@ describe("raid templates", () => {
     expect(
       templates.find((template) => template.name.includes("세르카"))?.slots,
     ).toHaveLength(4);
+    expect(
+      templates.find((template) => template.name === "베히모스")?.requirements,
+    ).toContain("아크 패시브");
 
     const secondImport = await importDefaultRaidTemplatesForLeader({
       actorMemberId: leader.id,

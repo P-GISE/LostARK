@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MembersPage from "@/app/members/page";
 
@@ -92,6 +93,63 @@ describe("MembersPage", () => {
     ).not.toBeInTheDocument();
     expect(mocks.listRaidTemplates).not.toHaveBeenCalled();
     expect(mocks.listCharacterRaidChecksForGroup).not.toHaveBeenCalled();
+  });
+
+  it("opens the current member card and toggles every member card", async () => {
+    const user = userEvent.setup();
+    mocks.requireCurrentMember.mockResolvedValue({
+      groupId: "group-1",
+      id: "member-1",
+      role: "LEADER",
+    });
+    mocks.listMembers.mockResolvedValue([
+      {
+        id: "member-1",
+        nickname: "검수장",
+        characters: [
+          {
+            className: "바드",
+            combatPower: 6127,
+            id: "character-1",
+            isMain: true,
+            itemLevel: 1773.33,
+            lastSyncedAt: new Date("2026-06-05T12:00:00+09:00"),
+            name: "본캐",
+            notes: "",
+            preferredRole: "SUPPORT",
+            serverName: "루페온",
+          },
+        ],
+      },
+      {
+        id: "member-2",
+        nickname: "지원",
+        characters: [
+          {
+            className: "슬레이어",
+            combatPower: 5800,
+            id: "character-2",
+            isMain: false,
+            itemLevel: 1690,
+            lastSyncedAt: null,
+            name: "부캐",
+            notes: "",
+            preferredRole: "DPS",
+            serverName: "카제로스",
+          },
+        ],
+      },
+    ]);
+    render(await MembersPage());
+
+    expect(screen.getByLabelText("검수장 캐릭터")).toHaveAttribute("open");
+    expect(screen.getByLabelText("지원 캐릭터")).not.toHaveAttribute("open");
+
+    await user.click(screen.getByText("지원"));
+    expect(screen.getByLabelText("지원 캐릭터")).toHaveAttribute("open");
+
+    await user.click(screen.getByText("검수장"));
+    expect(screen.getByLabelText("검수장 캐릭터")).not.toHaveAttribute("open");
   });
 
   it("shows sync failure state without weekly boss checklist controls", async () => {

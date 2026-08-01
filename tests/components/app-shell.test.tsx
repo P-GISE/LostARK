@@ -38,17 +38,17 @@ describe("AppShell", () => {
     render(await AppShell({ children: <main>본문</main> }));
 
     const primaryNav = within(
-      screen.getByRole("navigation", { name: "주요 메뉴" }),
+      screen.getByRole("navigation", { name: "공대장 업무" }),
     );
     expect(primaryNav.getByRole("link", { name: "대시보드" })).toHaveAttribute(
       "href",
       "/",
     );
-    expect(primaryNav.getByRole("link", { name: "주간" })).toHaveAttribute(
+    expect(primaryNav.getByRole("link", { name: "주간 일정" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(primaryNav.getByRole("link", { name: "편성" })).toHaveAttribute(
+    expect(primaryNav.getByRole("link", { name: "공대 편성" })).toHaveAttribute(
       "href",
       "/sets",
     );
@@ -59,23 +59,15 @@ describe("AppShell", () => {
     expect(primaryNav.queryByRole("link", { name: "템플릿" })).not.toBeInTheDocument();
 
     const secondaryNav = within(
-      screen.getByRole("navigation", { name: "보조 메뉴" }),
+      screen.getByRole("navigation", { name: "공대원 업무" }),
     );
-    expect(secondaryNav.getByRole("link", { name: "숙제" })).toHaveAttribute(
+    expect(secondaryNav.getByRole("link", { name: "숙제 현황" })).toHaveAttribute(
       "href",
       "/homework",
     );
-    expect(secondaryNav.getByRole("link", { name: "신청" })).toHaveAttribute(
+    expect(secondaryNav.getByRole("link", { name: "레이드 신청" })).toHaveAttribute(
       "href",
       "/signup",
-    );
-    expect(secondaryNav.getByRole("link", { name: "템플릿" })).toHaveAttribute(
-      "href",
-      "/templates",
-    );
-    expect(secondaryNav.getByRole("link", { name: "알림" })).toHaveAttribute(
-      "href",
-      "/notifications",
     );
     expect(secondaryNav.getByRole("link", { name: "공대원" })).toHaveAttribute(
       "href",
@@ -93,6 +85,14 @@ describe("AppShell", () => {
     expect(accountMenu.getByRole("link", { name: "일정 가이드" })).toHaveAttribute(
       "href",
       "/guides/raid-schedule",
+    );
+    expect(accountMenu.getByRole("link", { name: "템플릿" })).toHaveAttribute(
+      "href",
+      "/templates",
+    );
+    expect(accountMenu.getByRole("link", { name: "알림" })).toHaveAttribute(
+      "href",
+      "/notifications",
     );
     expect(accountMenu.getByRole("link", { name: "공대 설정" })).toHaveAttribute(
       "href",

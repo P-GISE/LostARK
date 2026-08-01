@@ -14,6 +14,9 @@ type OperationalSettingsView = {
   readonly raidReminderLeadMinutes: number;
   readonly availabilityChangeNoticeEnabled: boolean;
   readonly discordChannelId: string | null;
+  readonly discordGuildId: string | null;
+  readonly discordRecruitmentChannelId: string | null;
+  readonly discordAnnouncementChannelId: string | null;
 };
 
 export function BasicSettingsSection({
@@ -131,6 +134,33 @@ export function BasicSettingsSection({
                 className={inputClassName}
                 defaultValue={settings.discordChannelId ?? ""}
                 name="discordChannelId"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              디스코드 서버 ID
+              <input
+                className={inputClassName}
+                defaultValue={settings.discordGuildId ?? ""}
+                name="discordGuildId"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              모집 채널 ID
+              <input
+                className={inputClassName}
+                defaultValue={settings.discordRecruitmentChannelId ?? ""}
+                name="discordRecruitmentChannelId"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              공지 채널 ID
+              <input
+                className={inputClassName}
+                defaultValue={settings.discordAnnouncementChannelId ?? ""}
+                name="discordAnnouncementChannelId"
               />
             </label>
           </div>

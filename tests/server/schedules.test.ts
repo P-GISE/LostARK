@@ -13,6 +13,7 @@ import {
   unassignScheduleSlot,
   updateSchedule,
 } from "@/server/schedules";
+import { updateMemberPermissions } from "@/server/group-permissions";
 
 describe("schedules", () => {
   it("creates schedule slots from a raid template", async () => {
@@ -473,6 +474,110 @@ describe("schedules", () => {
     expect(updated.title).toBe("New title");
     expect(updated.notes).toBe("시간 변경");
     expect(canceled.status).toBe("CANCELED");
+  });
+
+  it("updates schedules by delegated schedule editors", async () => {
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "위임 일정 공대",
+      leaderNickname: "리더",
+    });
+    const editor = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "일정관리자",
+    });
+    await updateMemberPermissions({
+      actorMemberId: leader.id,
+      memberId: editor.id,
+      permissions: { canEditSchedules: true },
+    });
+    const template = await createRaidTemplate({
+      groupId: group.id,
+      name: "Raid",
+      difficulty: "Hard",
+      gates: "1",
+      requiredPlayers: 1,
+      requirements: "",
+      notes: "",
+      slots: [
+        {
+          label: "DPS 1",
+          role: "DPS",
+          required: true,
+          classPreference: "",
+          notes: "",
+        },
+      ],
+    });
+    const schedule = await createScheduleFromTemplate({
+      groupId: group.id,
+      templateId: template.id,
+      title: "Old title",
+      startsAt: "2030-06-05T21:00:00+09:00",
+      createdByMemberId: leader.id,
+    });
+
+    const updated = await updateSchedule({
+      actorMemberId: editor.id,
+      scheduleId: schedule.id,
+      title: "Delegated title",
+      startsAt: "2030-06-06T21:00:00+09:00",
+      notes: "위임 수정",
+    });
+
+    expect(updated.title).toBe("Delegated title");
+    expect(updated.notes).toBe("위임 수정");
+  });
+
+  it("rejects invalid and past schedule updates", async () => {
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "일정 검증 공대",
+      leaderNickname: "리더",
+    });
+    const template = await createRaidTemplate({
+      groupId: group.id,
+      name: "Raid",
+      difficulty: "Hard",
+      gates: "1",
+      requiredPlayers: 1,
+      requirements: "",
+      notes: "",
+      slots: [
+        {
+          label: "DPS 1",
+          role: "DPS",
+          required: true,
+          classPreference: "",
+          notes: "",
+        },
+      ],
+    });
+    const schedule = await createScheduleFromTemplate({
+      groupId: group.id,
+      templateId: template.id,
+      title: "Valid schedule",
+      startsAt: "2030-06-05T21:00:00+09:00",
+      createdByMemberId: leader.id,
+    });
+
+    await expect(
+      updateSchedule({
+        actorMemberId: leader.id,
+        scheduleId: schedule.id,
+        title: "Invalid date",
+        startsAt: "not-a-date",
+        notes: "",
+      }),
+    ).rejects.toThrow("일정 시작 시간이 올바르지 않습니다");
+    await expect(
+      updateSchedule({
+        actorMemberId: leader.id,
+        scheduleId: schedule.id,
+        title: "Past date",
+        startsAt: "2026-06-07T16:30:00+09:00",
+        notes: "",
+        now: new Date("2026-06-07T07:30:00.000Z"),
+      }),
+    ).rejects.toThrow("지난 시간으로 일정을 변경할 수 없습니다");
   });
 
   it("unassigns a schedule slot", async () => {

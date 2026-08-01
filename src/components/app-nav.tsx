@@ -7,6 +7,7 @@ import { cx } from "@/components/ui";
 export type AppNavItem = {
   href: string;
   label: string;
+  shortLabel?: string;
 };
 
 function isActivePath(pathname: string, href: string) {
@@ -31,6 +32,7 @@ export function AppNavLinks({
         const active = isActivePath(pathname, item.href);
         return (
           <Link
+            aria-label={item.shortLabel ? item.label : undefined}
             aria-current={active ? "page" : undefined}
             className={cx(
               variant === "tab"
@@ -45,7 +47,14 @@ export function AppNavLinks({
             href={item.href}
             key={item.href}
           >
-            {item.label}
+            {item.shortLabel ? (
+              <>
+                <span className="hidden sm:inline">{item.label}</span>
+                <span className="sm:hidden">{item.shortLabel}</span>
+              </>
+            ) : (
+              item.label
+            )}
           </Link>
         );
       })}

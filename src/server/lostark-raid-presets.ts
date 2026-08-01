@@ -10,7 +10,7 @@ export type LostArkRaidPreset = {
 };
 
 const defaultRequirements =
-  "아이템 레벨, 엘릭서/초월/보석, 숙련도 기준은 공대 운영에 맞게 조정하세요.";
+  "아이템 레벨, 아크 패시브, 보석, 전투력, 숙련도 기준은 공대 운영에 맞게 조정하세요.";
 
 const defaultNotes = "2026년 6월 기준 상시 레이드 프리셋입니다.";
 

@@ -1,6 +1,7 @@
 import { ConfirmationStatus } from "@prisma/client";
 import { isDateTimeInPast } from "@/lib/time-slots";
 import { db } from "@/server/db";
+import { requireCanEditSchedules } from "@/server/group-permissions";
 import { queueScheduleNotificationJobs } from "@/server/notifications";
 import { buildRaidGuideNotes } from "@/server/raid-guide-notes";
 
@@ -23,7 +24,16 @@ async function requireScheduleManager(input: {
     },
   });
 
-  if (!actor || (actor.role !== "LEADER" && schedule.createdByMemberId !== actor.id)) {
+  if (!actor) {
+    throw new Error("일정을 변경할 권한이 없습니다");
+  }
+  if (actor.role === "LEADER" || schedule.createdByMemberId === actor.id) {
+    return schedule;
+  }
+
+  try {
+    await requireCanEditSchedules(actor.id);
+  } catch {
     throw new Error("일정을 변경할 권한이 없습니다");
   }
 
@@ -157,14 +167,22 @@ export async function updateSchedule(input: {
   title: string;
   startsAt: string;
   notes: string;
+  now?: Date;
 }) {
   await requireScheduleManager(input);
+  const startsAt = new Date(input.startsAt);
+  if (Number.isNaN(startsAt.getTime())) {
+    throw new Error("일정 시작 시간이 올바르지 않습니다");
+  }
+  if (isDateTimeInPast(input.startsAt, input.now)) {
+    throw new Error("지난 시간으로 일정을 변경할 수 없습니다");
+  }
 
   return db.schedule.update({
     where: { id: input.scheduleId },
     data: {
       title: input.title.trim(),
-      startsAt: new Date(input.startsAt),
+      startsAt,
       notes: input.notes.trim(),
     },
   });

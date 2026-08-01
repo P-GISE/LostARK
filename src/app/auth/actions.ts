@@ -1,11 +1,16 @@
 "use server";
 
 import {
+  clearCurrentMemberSession,
   clearCurrentSessions,
   getFirstMemberForUser,
   setCurrentMemberSession,
   setCurrentUserSession,
 } from "@/server/auth-context";
+import {
+  clearAuthRateLimit,
+  enforceAuthRateLimit,
+} from "@/server/auth-rate-limit";
 import { authenticateUser, createUser } from "@/server/accounts";
 import { redirect } from "next/navigation";
 
@@ -40,12 +45,19 @@ export async function signupAction(
   let target = "/groups/new";
 
   try {
+    const email = String(formData.get("email") ?? "");
+    const rateLimitTicket = await enforceAuthRateLimit({
+      identifier: email,
+      scope: "signup",
+    });
     const user = await createUser({
-      email: String(formData.get("email") ?? ""),
+      email,
       password: String(formData.get("password") ?? ""),
       displayName: String(formData.get("displayName") ?? ""),
     });
+    clearAuthRateLimit(rateLimitTicket);
     await setCurrentUserSession(user.id);
+    await clearCurrentMemberSession();
     target = safeNextPath(formData.get("next")) ?? target;
   } catch (error) {
     return { error: getErrorMessage(error) };
@@ -61,21 +73,30 @@ export async function loginAction(
   let target = "/groups/new";
 
   try {
+    const email = String(formData.get("email") ?? "");
+    const rateLimitTicket = await enforceAuthRateLimit({
+      identifier: email,
+      scope: "login",
+    });
     const user = await authenticateUser({
-      email: String(formData.get("email") ?? ""),
+      email,
       password: String(formData.get("password") ?? ""),
     });
+    clearAuthRateLimit(rateLimitTicket);
     await setCurrentUserSession(user.id);
+
+    const member = await getFirstMemberForUser(user.id);
+    if (member) {
+      await setCurrentMemberSession(member.id);
+    } else {
+      await clearCurrentMemberSession();
+    }
 
     const nextPath = safeNextPath(formData.get("next"));
     if (nextPath) {
       target = nextPath;
-    } else {
-      const member = await getFirstMemberForUser(user.id);
-      if (member) {
-        await setCurrentMemberSession(member.id);
-        target = "/";
-      }
+    } else if (member) {
+      target = "/";
     }
   } catch (error) {
     return { error: getErrorMessage(error) };

@@ -138,71 +138,100 @@ export default async function MembersPage() {
             const latestSyncedAt = getLatestSyncedAt(member.characters);
 
             return (
-              <SectionPanel
-                description={`마지막 동기화: ${formatSyncedAt(latestSyncedAt)}`}
+              <details
+                aria-label={`${member.nickname} 캐릭터`}
+                className="group min-w-0 rounded-lg border border-slate-200/90 bg-white shadow-sm shadow-slate-200/60"
                 key={member.id}
-                title={member.nickname}
+                open={member.id === currentMember.id}
               >
-                {member.characterSyncFailedAt ||
-                member.characterSyncFailureReason ? (
-                  <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                    <div className="font-semibold">최근 자동동기화 실패</div>
-                    <div className="mt-1 text-xs leading-5">
-                      {member.characterSyncFailureReason ??
-                        "알 수 없는 동기화 오류"}
+                <summary className="flex cursor-pointer list-none flex-col gap-3 rounded-lg bg-slate-50/80 px-4 py-3 transition hover:bg-teal-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-100 sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <h2 className="truncate text-sm font-semibold text-slate-950">
+                        {member.nickname}
+                      </h2>
+                      {member.id === currentMember.id ? (
+                        <Badge tone="info">나</Badge>
+                      ) : null}
                     </div>
-                    {member.characterSyncFailedAt ? (
-                      <div className="mt-1 text-xs text-amber-800">
-                        실패 시각: {formatSyncedAt(member.characterSyncFailedAt)}
-                      </div>
-                    ) : null}
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      마지막 동기화: {formatSyncedAt(latestSyncedAt)}
+                    </p>
                   </div>
-                ) : null}
-                {member.characters.length === 0 ? (
-                  <EmptyState title="등록된 캐릭터가 없습니다." />
-                ) : (
-                  <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {member.characters.map((character) => (
-                      <div
-                        className="min-w-0 rounded-lg border border-slate-200/90 bg-slate-50/80 p-4"
-                        key={character.id}
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          {character.isMain ? (
-                            <Badge tone="info">본캐</Badge>
-                          ) : null}
-                          <Badge tone="neutral">{character.serverName || "-"}</Badge>
-                        </div>
-                        <div className="mt-3">
-                          <div className="text-base font-semibold text-slate-950">
-                            {character.name}
-                          </div>
-                          <div className="mt-1 text-sm text-slate-600">
-                            {character.className}
-                          </div>
-                        </div>
-                        <div className="mt-4 grid gap-2 text-sm text-slate-700">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">아이템 레벨</span>
-                            <span className="font-semibold text-slate-950">
-                              {formatItemLevel(character.itemLevel)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">전투력</span>
-                            <span className="font-semibold text-slate-950">
-                              {formatCombatPower(character.combatPower)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mt-3 text-xs text-slate-500">
-                          갱신: {formatSyncedAt(character.lastSyncedAt)}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge tone={member.characters.length > 0 ? "success" : "neutral"}>
+                      {member.characters.length} 캐릭터
+                    </Badge>
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-500 transition group-open:rotate-180"
+                    >
+                      v
+                    </span>
                   </div>
-                )}
-              </SectionPanel>
+                </summary>
+                <div className="border-t border-slate-100 p-4">
+                  {member.characterSyncFailedAt ||
+                  member.characterSyncFailureReason ? (
+                    <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <div className="font-semibold">최근 자동동기화 실패</div>
+                      <div className="mt-1 text-xs leading-5">
+                        {member.characterSyncFailureReason ??
+                          "알 수 없는 동기화 오류"}
+                      </div>
+                      {member.characterSyncFailedAt ? (
+                        <div className="mt-1 text-xs text-amber-800">
+                          실패 시각: {formatSyncedAt(member.characterSyncFailedAt)}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {member.characters.length === 0 ? (
+                    <EmptyState title="등록된 캐릭터가 없습니다." />
+                  ) : (
+                    <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {member.characters.map((character) => (
+                        <div
+                          className="min-w-0 rounded-lg border border-slate-200/90 bg-slate-50/80 p-4"
+                          key={character.id}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            {character.isMain ? (
+                              <Badge tone="info">본캐</Badge>
+                            ) : null}
+                            <Badge tone="neutral">{character.serverName || "-"}</Badge>
+                          </div>
+                          <div className="mt-3">
+                            <div className="text-base font-semibold text-slate-950">
+                              {character.name}
+                            </div>
+                            <div className="mt-1 text-sm text-slate-600">
+                              {character.className}
+                            </div>
+                          </div>
+                          <div className="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-slate-500">아이템 레벨</span>
+                              <span className="font-semibold text-slate-950">
+                                {formatItemLevel(character.itemLevel)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-slate-500">전투력</span>
+                              <span className="font-semibold text-slate-950">
+                                {formatCombatPower(character.combatPower)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-3 text-xs text-slate-500">
+                            갱신: {formatSyncedAt(character.lastSyncedAt)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </details>
             );
           })}
         </section>

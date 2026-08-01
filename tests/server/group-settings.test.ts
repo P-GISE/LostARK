@@ -36,6 +36,9 @@ describe("group settings", () => {
       availabilityChangeNoticeEnabled: true,
       dailyDiscordSummaryEnabled: true,
       dailyDiscordSummaryTime: "11:30",
+      discordAnnouncementChannelId: "9876543210",
+      discordGuildId: "791362292523466822",
+      discordRecruitmentChannelId: "1234567890",
       groupId: group.id,
       raidReminderLeadMinutes: 30,
       timetableEndHour: 2,
@@ -46,6 +49,9 @@ describe("group settings", () => {
     expect(updated.timetableStartHour).toBe(10);
     expect(updated.dailyDiscordSummaryEnabled).toBe(true);
     expect(updated.raidReminderLeadMinutes).toBe(30);
+    expect(updated.discordGuildId).toBe("791362292523466822");
+    expect(updated.discordRecruitmentChannelId).toBe("1234567890");
+    expect(updated.discordAnnouncementChannelId).toBe("9876543210");
   });
 
   it("rejects members without settings permission", async () => {

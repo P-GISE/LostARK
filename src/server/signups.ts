@@ -7,6 +7,12 @@ export class RaidSignupError extends Error {
   readonly name = "RaidSignupError";
 }
 
+function assertPositiveInteger(value: number, label: string) {
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
+    throw new RaidSignupError(`${label} 값이 올바르지 않습니다`);
+  }
+}
+
 async function requireSignupOrganizer(input: {
   readonly actorMemberId: string;
   readonly signupId: string;
@@ -31,6 +37,8 @@ export async function createRaidSignup(input: {
   readonly weekStartDate: string;
   readonly partySize: number;
   readonly maxParties: number;
+  readonly discordGuildId?: string | null;
+  readonly discordChannelId?: string | null;
 }) {
   const actor = await requireCanManageSets(input.actorMemberId);
   const template = await db.raidTemplate.findUnique({
@@ -39,13 +47,17 @@ export async function createRaidSignup(input: {
   if (!template || template.groupId !== actor.groupId) {
     throw new RaidSignupError("공대에 없는 레이드 템플릿입니다");
   }
-  if (input.partySize < 1 || input.maxParties < 1) {
-    throw new RaidSignupError("파티 크기와 최대 파티 수가 올바르지 않습니다");
+  assertPositiveInteger(input.partySize, "파티 인원");
+  assertPositiveInteger(input.maxParties, "최대 파티 수");
+  if (input.partySize > template.requiredPlayers) {
+    throw new RaidSignupError("파티 인원은 레이드 정원보다 클 수 없습니다");
   }
 
   return db.raidSignup.create({
     data: {
       createdByMemberId: actor.id,
+      discordChannelId: input.discordChannelId?.trim() || null,
+      discordGuildId: input.discordGuildId?.trim() || null,
       groupId: actor.groupId,
       maxParties: input.maxParties,
       partySize: input.partySize,
@@ -54,6 +66,27 @@ export async function createRaidSignup(input: {
       weekStartDate: input.weekStartDate,
     },
     include: { entries: true, template: true },
+  });
+}
+
+export async function recordRaidSignupDiscordMessage(input: {
+  readonly signupId: string;
+  readonly discordChannelId?: string | null;
+  readonly discordMessageId: string;
+  readonly postedAt?: Date;
+}) {
+  const discordMessageId = input.discordMessageId.trim();
+  if (!discordMessageId) {
+    throw new RaidSignupError("디스코드 메시지 ID가 필요합니다");
+  }
+
+  return db.raidSignup.update({
+    where: { id: input.signupId },
+    data: {
+      discordChannelId: input.discordChannelId?.trim() || undefined,
+      discordMessageId,
+      discordPostedAt: input.postedAt ?? new Date(),
+    },
   });
 }
 

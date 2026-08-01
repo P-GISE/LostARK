@@ -14,6 +14,10 @@ describe("SignupBoard", () => {
                 character: { className: "Bard", name: "BardOne" },
                 id: "entry-1",
                 member: { id: "member-2", nickname: "Helper" },
+                readiness: {
+                  reasons: ["전투력 미확인"],
+                  status: "WARNING",
+                },
                 status: "APPLIED",
               },
             ],
@@ -32,6 +36,8 @@ describe("SignupBoard", () => {
     expect(screen.getByText("Akkan class")).toBeInTheDocument();
     expect(screen.getByText("BardOne")).toBeInTheDocument();
     expect(screen.getByText("신청 가능")).toBeInTheDocument();
+    expect(screen.getByText("확인 필요")).toBeInTheDocument();
+    expect(screen.getByText("전투력 미확인")).toBeInTheDocument();
   });
 
   it("renders member apply controls and hides organizer controls for members", () => {

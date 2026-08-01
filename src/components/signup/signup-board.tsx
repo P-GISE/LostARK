@@ -32,6 +32,10 @@ type SignupEntryView = {
     readonly name: string;
     readonly className: string;
   };
+  readonly readiness?: {
+    readonly status: "READY" | "WARNING" | "BLOCKED";
+    readonly reasons: readonly string[];
+  };
 };
 
 type SignupView = {
@@ -50,6 +54,28 @@ type SignupView = {
 
 function characterLabel(character: SignupCharacterOption) {
   return `${character.name} · ${character.className}`;
+}
+
+function readinessTone(status: "READY" | "WARNING" | "BLOCKED") {
+  if (status === "READY") {
+    return "success";
+  }
+  if (status === "BLOCKED") {
+    return "danger";
+  }
+
+  return "warning";
+}
+
+function readinessText(status: "READY" | "WARNING" | "BLOCKED") {
+  if (status === "READY") {
+    return "준비 완료";
+  }
+  if (status === "BLOCKED") {
+    return "기준 미달";
+  }
+
+  return "확인 필요";
 }
 
 export function SignupBoard({
@@ -119,8 +145,18 @@ export function SignupBoard({
                         <div className="text-sm text-slate-500">
                           {entry.character.className} · {entry.member.nickname}
                         </div>
+                        {entry.readiness ? (
+                          <div className="mt-1 text-xs text-slate-500">
+                            {entry.readiness.reasons.slice(0, 2).join(" · ")}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
+                        {entry.readiness ? (
+                          <Badge tone={readinessTone(entry.readiness.status)}>
+                            {readinessText(entry.readiness.status)}
+                          </Badge>
+                        ) : null}
                         <Badge tone={entryStatusTone(entry.status)}>
                           {entryStatusText(entry.status)}
                         </Badge>

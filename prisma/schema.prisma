@@ -74,20 +74,21 @@ enum RaidSignupEntryStatus {
 }
 
 model Group {
-  id            String             @id @default(cuid())
-  name          String
-  inviteCode    String             @unique
-  inviteEnabled Boolean            @default(true)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  members       Member[]
-  templates     RaidTemplate[]
-  schedules     Schedule[]
-  notifications NotificationJob[]
-  settings      GroupSettings?
-  activityLogs  GroupActivityLog[]
-  raidSets      RaidSet[]
-  signups       RaidSignup[]
+  id                String             @id @default(cuid())
+  name              String
+  inviteCode        String             @unique
+  inviteEnabled     Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  members           Member[]
+  templates         RaidTemplate[]
+  schedules         Schedule[]
+  notifications     NotificationJob[]
+  settings          GroupSettings?
+  activityLogs      GroupActivityLog[]
+  raidSets          RaidSet[]
+  signups           RaidSignup[]
+  botOutboxMessages BotOutboxMessage[]
 }
 
 model User {
@@ -180,6 +181,9 @@ model RaidTemplate {
   requiredPlayers     Int
   requirements        String               @default("")
   notes               String               @default("")
+  minimumItemLevel    Float?
+  minimumCombatPower  Int?
+  readinessNotes      String               @default("")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   slots               RaidTemplateSlot[]
@@ -297,8 +301,28 @@ model GroupSettings {
   raidReminderLeadMinutes         Int      @default(60)
   availabilityChangeNoticeEnabled Boolean  @default(false)
   discordChannelId                String?
+  discordGuildId                  String?
+  discordRecruitmentChannelId     String?
+  discordAnnouncementChannelId    String?
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
+}
+
+model BotOutboxMessage {
+  id               String    @id @default(cuid())
+  groupId          String
+  group            Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  discordGuildId   String
+  discordChannelId String
+  payloadJson      String
+  status           String    @default("PENDING")
+  failureReason    String?
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([groupId])
 }
 
 model MemberPermission {
@@ -415,6 +439,11 @@ model RaidSignup {
   partySize         Int
   maxParties        Int
   status            RaidSignupStatus       @default(OPEN)
+  discordGuildId    String?
+  discordChannelId  String?
+  discordMessageId  String?
+  discordPostedAt   DateTime?
+  discordClosedAt   DateTime?
   createdByMemberId String
   createdBy         Member                 @relation(fields: [createdByMemberId], references: [id])
   createdAt         DateTime               @default(now())

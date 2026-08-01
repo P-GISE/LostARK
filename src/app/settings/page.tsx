@@ -65,6 +65,13 @@ async function updateSettings(formData: FormData) {
       formData.get("dailyDiscordSummaryTime") ?? "",
     ),
     discordChannelId: String(formData.get("discordChannelId") ?? ""),
+    discordGuildId: String(formData.get("discordGuildId") ?? ""),
+    discordRecruitmentChannelId: String(
+      formData.get("discordRecruitmentChannelId") ?? "",
+    ),
+    discordAnnouncementChannelId: String(
+      formData.get("discordAnnouncementChannelId") ?? "",
+    ),
     groupId: current.groupId,
     raidReminderLeadMinutes: numberFromFormData(
       formData,

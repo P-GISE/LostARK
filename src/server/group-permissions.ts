@@ -50,6 +50,13 @@ export async function canConfirmSchedules(memberId: string) {
   );
 }
 
+export async function canEditSchedules(memberId: string) {
+  const member = await getMemberWithPermissions(memberId);
+  return (
+    member.role === "LEADER" || member.permissions?.canEditSchedules === true
+  );
+}
+
 export async function requireCanManageSets(memberId: string) {
   const member = await getMemberWithPermissions(memberId);
   if (member.role === "LEADER" || member.permissions?.canManageSets === true) {
@@ -93,6 +100,18 @@ export async function requireCanConfirmSchedules(memberId: string) {
   }
 
   throw new GroupPermissionError("일정 확정 권한이 필요합니다");
+}
+
+export async function requireCanEditSchedules(memberId: string) {
+  const member = await getMemberWithPermissions(memberId);
+  if (
+    member.role === "LEADER" ||
+    member.permissions?.canEditSchedules === true
+  ) {
+    return member;
+  }
+
+  throw new GroupPermissionError("일정 수정 권한이 필요합니다");
 }
 
 export async function updateMemberPermissions(input: {

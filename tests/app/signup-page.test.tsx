@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   listCharactersForMember: vi.fn(),
   listRaidSignups: vi.fn(),
   listRaidTemplates: vi.fn(),
+  buildSignupReadiness: vi.fn(),
   requireCurrentMember: vi.fn(),
 }));
 
@@ -43,6 +44,10 @@ vi.mock("@/server/raid-templates", () => ({
   listRaidTemplates: mocks.listRaidTemplates,
 }));
 
+vi.mock("@/server/readiness", () => ({
+  buildSignupReadiness: mocks.buildSignupReadiness,
+}));
+
 vi.mock("@/lib/lostark-week", () => ({
   getLostArkWeekStartDate: mocks.getLostArkWeekStartDate,
 }));
@@ -67,6 +72,7 @@ describe("SignupPage", () => {
     mocks.listCharactersForMember.mockResolvedValue([
       { className: "Bard", id: "character-1", name: "BardOne" },
     ]);
+    mocks.buildSignupReadiness.mockResolvedValue([]);
     mocks.listRaidSignups.mockResolvedValue([
       {
         entries: [],
@@ -111,6 +117,7 @@ describe("SignupPage", () => {
     ]);
     mocks.canManageSets.mockResolvedValue(true);
     mocks.listCharactersForMember.mockResolvedValue([]);
+    mocks.buildSignupReadiness.mockResolvedValue([]);
     mocks.listRaidSignups.mockResolvedValue([]);
 
     // When

@@ -10,19 +10,22 @@ import {
   secondaryButtonClassName,
 } from "@/components/ui";
 
-const primaryNavItems: AppNavItem[] = [
-  { href: "/", label: "대시보드" },
-  { href: "/weekly", label: "주간" },
-  { href: "/sets", label: "편성" },
-  { href: "/calendar", label: "가능 시간" },
+const leaderNavItems: AppNavItem[] = [
+  { href: "/", label: "대시보드", shortLabel: "요약" },
+  { href: "/weekly", label: "주간 일정", shortLabel: "주간" },
+  { href: "/sets", label: "공대 편성", shortLabel: "편성" },
+  { href: "/calendar", label: "가능 시간", shortLabel: "시간" },
 ];
 
-const secondaryNavItems: AppNavItem[] = [
-  { href: "/homework", label: "숙제" },
-  { href: "/signup", label: "신청" },
+const memberNavItems: AppNavItem[] = [
+  { href: "/signup", label: "레이드 신청", shortLabel: "신청" },
+  { href: "/homework", label: "숙제 현황", shortLabel: "숙제" },
+  { href: "/members", label: "공대원" },
+];
+
+const managementNavItems: AppNavItem[] = [
   { href: "/templates", label: "템플릿" },
   { href: "/notifications", label: "알림" },
-  { href: "/members", label: "공대원" },
 ];
 
 const helpNavItems: AppNavItem[] = [
@@ -40,12 +43,16 @@ const publicNavItems: AppNavItem[] = [
 
 function AccountMenu({
   groupName,
-  secondaryItems,
+  leaderItems,
+  memberItems,
+  managementItems,
   helpItems,
   utilityItems,
 }: {
   groupName: string;
-  secondaryItems: AppNavItem[];
+  leaderItems: AppNavItem[];
+  memberItems: AppNavItem[];
+  managementItems: AppNavItem[];
   helpItems: AppNavItem[];
   utilityItems: AppNavItem[];
 }) {
@@ -54,7 +61,7 @@ function AccountMenu({
       aria-label="더보기 메뉴"
       className="relative ml-auto"
     >
-      <summary className="inline-flex h-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-900 [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-teal-900 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 [&::-webkit-details-marker]:hidden">
         더보기
       </summary>
       <div className="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg shadow-slate-300/40">
@@ -64,8 +71,23 @@ function AccountMenu({
             {groupName}
           </div>
         </div>
-        <div className="grid gap-1 p-1 sm:hidden">
-          <AppNavLinks items={secondaryItems} variant="menu" />
+        <div className="grid gap-1 p-1 lg:hidden">
+          <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
+            공대장 업무
+          </div>
+          <AppNavLinks items={leaderItems} variant="menu" />
+        </div>
+        <div className="grid gap-1 border-t border-slate-100 p-1 lg:hidden">
+          <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
+            공대원 업무
+          </div>
+          <AppNavLinks items={memberItems} variant="menu" />
+        </div>
+        <div className="grid gap-1 border-t border-slate-100 p-1">
+          <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
+            운영 관리
+          </div>
+          <AppNavLinks items={[...managementItems, ...utilityItems]} variant="menu" />
         </div>
         <div className="grid gap-1 border-t border-slate-100 p-1">
           <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
@@ -73,14 +95,6 @@ function AccountMenu({
           </div>
           <AppNavLinks items={helpItems} variant="menu" />
         </div>
-        {utilityItems.length > 0 ? (
-          <div className="grid gap-1 border-t border-slate-100 p-1">
-            <div className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-500">
-              관리
-            </div>
-            <AppNavLinks items={utilityItems} variant="menu" />
-          </div>
-        ) : null}
         <form action={logoutAction} className="border-t border-slate-100 p-1">
           <button className="flex h-9 w-full items-center rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
             로그아웃
@@ -118,24 +132,34 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             {member ? (
               <>
+                <div className="order-3 grid w-full gap-1 sm:order-none sm:flex sm:w-auto sm:flex-1 sm:items-center">
+                  <span className="hidden text-[11px] font-semibold text-slate-400 xl:inline">
+                    공대장
+                  </span>
+                  <nav
+                    aria-label="공대장 업무"
+                    className="grid grid-cols-4 gap-1 sm:flex sm:flex-1"
+                  >
+                    <AppNavLinks items={leaderNavItems} />
+                  </nav>
+                </div>
                 <nav
-                  aria-label="주요 메뉴"
-                  className="order-3 grid w-full grid-cols-4 gap-1 sm:order-none sm:flex sm:w-auto sm:flex-1"
+                  aria-label="공대원 업무"
+                  className="hidden items-center gap-1 lg:flex"
                 >
-                  <AppNavLinks items={primaryNavItems} />
-                </nav>
-                <nav
-                  aria-label="보조 메뉴"
-                  className="hidden items-center gap-1 sm:flex"
-                >
-                  <AppNavLinks items={secondaryNavItems} />
+                  <span className="text-[11px] font-semibold text-slate-400 xl:inline">
+                    공대원
+                  </span>
+                  <AppNavLinks items={memberNavItems} />
                 </nav>
                 <div className="hidden max-w-48 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 lg:block">
                   {member.group.name}
                 </div>
                 <AccountMenu
                   groupName={member.group.name}
-                  secondaryItems={secondaryNavItems}
+                  leaderItems={leaderNavItems}
+                  memberItems={memberNavItems}
+                  managementItems={managementNavItems}
                   helpItems={helpNavItems}
                   utilityItems={utilityItems}
                 />

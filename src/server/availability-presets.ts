@@ -36,6 +36,18 @@ function toKstDateTime(date: string, time: string) {
   return new Date(`${date}T${time}:00+09:00`);
 }
 
+function formatKstTime(date: Date) {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return `${String(kst.getUTCHours()).padStart(2, "0")}:${String(
+    kst.getUTCMinutes(),
+  ).padStart(2, "0")}`;
+}
+
+function formatKstDate(date: Date) {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
 function dayOffset(slot: AvailabilityPresetSlotInput) {
   const offset = slot.dayOfWeek ?? slot.cycleDay ?? 0;
   if (!Number.isInteger(offset) || offset < 0 || offset > 27) {
@@ -81,6 +93,103 @@ export async function listAvailabilityPresets(memberId: string) {
     where: { memberId },
     include: { slots: { orderBy: { startTime: "asc" } } },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function applyAvailabilityPresetToWeek(input: {
+  readonly memberId: string;
+  readonly presetId: string;
+  readonly weekStartDate: string;
+}) {
+  const preset = await db.availabilityPreset.findFirst({
+    include: { slots: true },
+    where: { id: input.presetId, memberId: input.memberId },
+  });
+  if (!preset) {
+    throw new AvailabilityPresetError("프리셋을 찾을 수 없습니다");
+  }
+
+  return saveAvailabilityWeekOverride({
+    memberId: input.memberId,
+    slots: preset.slots.map((slot) => ({
+      cycleDay: slot.cycleDay,
+      dayOfWeek: slot.dayOfWeek,
+      endTime: slot.endTime,
+      startTime: slot.startTime,
+    })),
+    weekStartDate: input.weekStartDate,
+  });
+}
+
+export async function renameAvailabilityPreset(input: {
+  readonly memberId: string;
+  readonly presetId: string;
+  readonly name: string;
+}) {
+  const name = input.name.trim();
+  if (!name) {
+    throw new AvailabilityPresetError("프리셋 이름이 필요합니다");
+  }
+
+  const result = await db.availabilityPreset.updateMany({
+    where: { id: input.presetId, memberId: input.memberId },
+    data: { name },
+  });
+  if (result.count === 0) {
+    throw new AvailabilityPresetError("프리셋을 찾을 수 없습니다");
+  }
+
+  return db.availabilityPreset.findUnique({
+    include: { slots: true },
+    where: { id: input.presetId },
+  });
+}
+
+export async function deleteAvailabilityPreset(input: {
+  readonly memberId: string;
+  readonly presetId: string;
+}) {
+  const result = await db.availabilityPreset.deleteMany({
+    where: { id: input.presetId, memberId: input.memberId },
+  });
+  if (result.count === 0) {
+    throw new AvailabilityPresetError("프리셋을 찾을 수 없습니다");
+  }
+
+  return result;
+}
+
+export async function createAvailabilityPresetFromWeek(input: {
+  readonly memberId: string;
+  readonly name: string;
+  readonly weekStartDate: string;
+}) {
+  const weekEndDate = addDays(input.weekStartDate, 7);
+  const weekStart = toKstDateTime(input.weekStartDate, "00:00");
+  const weekEnd = toKstDateTime(weekEndDate, "00:00");
+  const blocks = await db.availabilityBlock.findMany({
+    orderBy: [{ startsAt: "asc" }, { endsAt: "asc" }],
+    where: {
+      memberId: input.memberId,
+      startsAt: { gte: weekStart },
+      endsAt: { lte: weekEnd },
+      status: "AVAILABLE",
+    },
+  });
+
+  return createAvailabilityPreset({
+    memberId: input.memberId,
+    mode: "WEEKLY",
+    name: input.name,
+    slots: blocks.map((block) => ({
+      dayOfWeek: Math.floor(
+        (toKstDateTime(formatKstDate(block.date), "00:00").getTime() -
+          weekStart.getTime()) /
+          (24 * 60 * 60 * 1000),
+      ),
+      endTime: formatKstTime(block.endsAt),
+      startTime: formatKstTime(block.startsAt),
+    })),
   });
 }
 

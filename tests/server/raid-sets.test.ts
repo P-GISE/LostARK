@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createCharacter } from "@/server/characters";
+import { db } from "@/server/db";
 import { createGroupWithLeader } from "@/server/groups";
-import { joinGroupByInvite } from "@/server/members";
+import { connectDiscordMember, joinGroupByInvite } from "@/server/members";
 import { createRaidTemplate } from "@/server/raid-templates";
 import {
   confirmRaidSetSchedule,
@@ -98,6 +99,71 @@ describe("raid sets", () => {
     // Then
     expect(schedule.title).toBe("아칸 1파티");
     expect(sets[0]?.status).toBe("CONFIRMED");
+  });
+
+  it("queues Discord notification jobs when confirming a draft set into a schedule", async () => {
+    // Given
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "세트 알림 공대",
+      leaderNickname: "리더",
+    });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "공대원",
+    });
+    await connectDiscordMember({
+      memberId: leader.id,
+      discordUserId: "1111111111",
+    });
+    await connectDiscordMember({
+      memberId: member.id,
+      discordUserId: "2222222222",
+    });
+    const template = await createRaidTemplate({
+      difficulty: "하드",
+      gates: "1",
+      groupId: group.id,
+      name: "아칸",
+      notes: "",
+      requiredPlayers: 1,
+      requirements: "",
+      slots: [
+        {
+          classPreference: "",
+          label: "딜러 1",
+          notes: "",
+          required: true,
+          role: "DPS",
+        },
+      ],
+    });
+    const raidSet = await createRaidSetFromTemplate({
+      actorMemberId: leader.id,
+      label: "아칸 알림 파티",
+      templateId: template.id,
+      weekStartDate: "2030-06-05",
+    });
+
+    // When
+    const schedule = await confirmRaidSetSchedule({
+      actorMemberId: leader.id,
+      raidSetId: raidSet.id,
+      startsAt: "2030-06-05T21:00:00+09:00",
+    });
+    const jobs = await db.notificationJob.findMany({
+      where: { scheduleId: schedule.id },
+      orderBy: [{ memberId: "asc" }, { type: "asc" }],
+    });
+
+    // Then
+    expect(jobs).toHaveLength(4);
+    expect(jobs.map((job) => job.type).sort()).toEqual([
+      "REMINDER",
+      "REMINDER",
+      "SCHEDULE_CREATED",
+      "SCHEDULE_CREATED",
+    ]);
+    expect(jobs[0]?.message).toContain("아칸 하드 · 1관문");
   });
 
   it("deletes a draft set from the weekly set list", async () => {

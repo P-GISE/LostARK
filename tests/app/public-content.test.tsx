@@ -39,7 +39,7 @@ describe("public AdSense approval content", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "로스트아크 고정 공대 운영을 한곳에서 정리합니다",
+        name: "공대장과 공대원이 같은 주간판을 봅니다",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("고정 공대 운영 체크리스트")).toBeInTheDocument();

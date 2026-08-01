@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import {
   getCurrentUser,
+  getMemberForUserInGroup,
   requireCurrentUser,
   setCurrentMemberSession,
 } from "@/server/auth-context";
@@ -75,6 +76,29 @@ export default async function InvitePage({
               로그인
             </Link>
           </div>
+        </SectionPanel>
+      </main>
+    );
+  }
+
+  const existingMember = await getMemberForUserInGroup({
+    groupId: group.id,
+    userId: user.id,
+  });
+  if (existingMember) {
+    return (
+      <main className={narrowPageShellClassName}>
+        <SectionPanel
+          className={narrowContentClassName}
+          description={`${group.name} 세션으로 전환할 수 있습니다.`}
+          title="공대 전환"
+        >
+          <form action={`${nextPath}/activate`} className="grid gap-3" method="post">
+            <p className="text-sm text-slate-600">
+              기존 공대에 이미 가입되어 있습니다.
+            </p>
+            <button className={primaryButtonClassName}>이 공대로 전환하기</button>
+          </form>
         </SectionPanel>
       </main>
     );

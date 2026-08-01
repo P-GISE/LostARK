@@ -22,6 +22,12 @@ describe("AvailabilityPresetsPanel", () => {
     expect(screen.getByText("내 프리셋")).toBeInTheDocument();
     expect(screen.getByText("Weeknight")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "프리셋 만들기" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "이름 변경" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "이번 주 적용" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "삭제" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "예외로 저장" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "이 주 설정을 프리셋으로 저장" }),
+    ).toBeInTheDocument();
   });
 });

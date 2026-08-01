@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createGroupWithLeader } from "@/server/groups";
 import {
+  canEditSchedules,
   canConfirmSchedules,
   canManageSets,
+  requireCanEditSchedules,
   requireCanConfirmSchedules,
   requireCanManageSets,
   updateMemberPermissions,
@@ -50,6 +52,32 @@ describe("group permissions", () => {
     await expect(canManageSets(member.id)).resolves.toBe(false);
     await expect(canConfirmSchedules(member.id)).resolves.toBe(true);
     await expect(requireCanConfirmSchedules(member.id)).resolves.toMatchObject({
+      id: member.id,
+    });
+  });
+
+  it("allows delegated members to edit schedules independently from confirmation", async () => {
+    // Given
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "일정 수정 위임 공대",
+      leaderNickname: "리더",
+    });
+    const member = await joinGroupByInvite({
+      inviteCode: group.inviteCode,
+      nickname: "일정관리자",
+    });
+
+    // When
+    await updateMemberPermissions({
+      actorMemberId: leader.id,
+      memberId: member.id,
+      permissions: { canEditSchedules: true },
+    });
+
+    // Then
+    await expect(canConfirmSchedules(member.id)).resolves.toBe(false);
+    await expect(canEditSchedules(member.id)).resolves.toBe(true);
+    await expect(requireCanEditSchedules(member.id)).resolves.toMatchObject({
       id: member.id,
     });
   });

@@ -125,6 +125,89 @@ describe("signups", () => {
     ).rejects.toThrow(RaidSignupError);
   });
 
+  it("rejects invalid party sizing when opening a signup", async () => {
+    // Given
+    const { group, leader } = await createGroupWithLeader({
+      groupName: "검증 신청 공대",
+      leaderNickname: "리더",
+    });
+    const template = await createRaidTemplate({
+      difficulty: "하드",
+      gates: "1",
+      groupId: group.id,
+      name: "아칸",
+      notes: "",
+      requiredPlayers: 4,
+      requirements: "",
+      slots: [
+        {
+          classPreference: "",
+          label: "딜러 1",
+          notes: "",
+          required: true,
+          role: "DPS",
+        },
+        {
+          classPreference: "",
+          label: "딜러 2",
+          notes: "",
+          required: true,
+          role: "DPS",
+        },
+        {
+          classPreference: "",
+          label: "딜러 3",
+          notes: "",
+          required: true,
+          role: "DPS",
+        },
+        {
+          classPreference: "",
+          label: "서폿 1",
+          notes: "",
+          required: true,
+          role: "SUPPORT",
+        },
+      ],
+    });
+    const baseInput = {
+      actorMemberId: leader.id,
+      templateId: template.id,
+      title: "검증 신청",
+      weekStartDate: "2030-06-05",
+    };
+
+    // When / Then
+    await expect(
+      createRaidSignup({
+        ...baseInput,
+        maxParties: 1,
+        partySize: 1.5,
+      }),
+    ).rejects.toThrow(RaidSignupError);
+    await expect(
+      createRaidSignup({
+        ...baseInput,
+        maxParties: Number.NaN,
+        partySize: 1,
+      }),
+    ).rejects.toThrow(RaidSignupError);
+    await expect(
+      createRaidSignup({
+        ...baseInput,
+        maxParties: 1,
+        partySize: 0,
+      }),
+    ).rejects.toThrow(RaidSignupError);
+    await expect(
+      createRaidSignup({
+        ...baseInput,
+        maxParties: 1,
+        partySize: 5,
+      }),
+    ).rejects.toThrow("파티 인원은 레이드 정원보다 클 수 없습니다");
+  });
+
   it("hides canceled signup cards and canceled entries from the active list", async () => {
     // Given
     const { group, leader } = await createGroupWithLeader({

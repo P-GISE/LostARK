@@ -9,6 +9,7 @@ import {
   requireCanManageSets,
 } from "@/server/group-permissions";
 import { getPartyTimeMatches } from "@/server/party-time-matching";
+import { queueScheduleNotificationJobs } from "@/server/notifications";
 
 export { RaidSetError } from "@/server/raid-set-access";
 export {
@@ -232,6 +233,16 @@ export async function confirmRaidSetSchedule(input: {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+
+  await queueScheduleNotificationJobs({
+    difficulty: schedule.template.difficulty,
+    gates: schedule.template.gates,
+    groupId: schedule.groupId,
+    scheduleId: schedule.id,
+    templateName: schedule.template.name,
+    title: schedule.title,
+    startsAt: schedule.startsAt,
+  });
 
   await writeGroupActivityLog({
     actionType: "RAID_SET_CONFIRMED",

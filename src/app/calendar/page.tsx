@@ -28,8 +28,12 @@ import {
 } from "@/server/availability";
 import { deleteStaleAvailabilityBlocksForGroup } from "@/server/availability-reset";
 import {
+  applyAvailabilityPresetToWeek,
   createAvailabilityPreset,
+  createAvailabilityPresetFromWeek,
+  deleteAvailabilityPreset,
   listAvailabilityPresets,
+  renameAvailabilityPreset,
   saveAvailabilityWeekOverride,
 } from "@/server/availability-presets";
 import { requireCurrentMember } from "@/server/auth-context";
@@ -172,6 +176,49 @@ export default async function CalendarPage() {
     revalidatePath("/calendar");
   }
 
+  async function applyPreset(formData: FormData) {
+    "use server";
+    const member = await requireCurrentMember();
+    await applyAvailabilityPresetToWeek({
+      memberId: member.id,
+      presetId: String(formData.get("presetId") ?? ""),
+      weekStartDate: String(formData.get("weekStartDate") ?? days[0].date),
+    });
+    revalidatePath("/calendar");
+  }
+
+  async function renamePreset(formData: FormData) {
+    "use server";
+    const member = await requireCurrentMember();
+    await renameAvailabilityPreset({
+      memberId: member.id,
+      name: String(formData.get("name") ?? ""),
+      presetId: String(formData.get("presetId") ?? ""),
+    });
+    revalidatePath("/calendar");
+  }
+
+  async function deletePreset(formData: FormData) {
+    "use server";
+    const member = await requireCurrentMember();
+    await deleteAvailabilityPreset({
+      memberId: member.id,
+      presetId: String(formData.get("presetId") ?? ""),
+    });
+    revalidatePath("/calendar");
+  }
+
+  async function saveCurrentWeekAsPreset(formData: FormData) {
+    "use server";
+    const member = await requireCurrentMember();
+    await createAvailabilityPresetFromWeek({
+      memberId: member.id,
+      name: String(formData.get("name") ?? ""),
+      weekStartDate: String(formData.get("weekStartDate") ?? days[0].date),
+    });
+    revalidatePath("/calendar");
+  }
+
   return (
     <main className={`${pageShellClassName} availability-cockpit`}>
       <PageHeader
@@ -195,9 +242,14 @@ export default async function CalendarPage() {
         </SectionPanel>
       </div>
       <AvailabilityPresetsPanel
+        applyPresetAction={applyPreset}
         createPresetAction={createPreset}
+        deletePresetAction={deletePreset}
         presets={presets}
+        renamePresetAction={renamePreset}
+        saveCurrentWeekAsPresetAction={saveCurrentWeekAsPreset}
         saveOverrideAction={saveWeekOverride}
+        weekStartDate={days[0].date}
       />
       <div
         className="availability-panel availability-panel--overview mt-5"

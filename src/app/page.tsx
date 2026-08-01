@@ -2,12 +2,12 @@ import Link from "next/link";
 import { logoutAction } from "@/app/auth/actions";
 import { ScheduleCard } from "@/components/schedule-card";
 import {
+  Badge,
   EmptyState,
   MetricCard,
   PageHeader,
   SectionPanel,
   balancedCardGridClassName,
-  balancedPanelGridClassName,
   cx,
   pageShellClassName,
   primaryButtonClassName,
@@ -16,6 +16,101 @@ import {
 import { getCurrentMember, getCurrentUser } from "@/server/auth-context";
 import { getDashboardSummary } from "@/server/dashboard";
 
+type TaskTone = "neutral" | "success" | "warning" | "danger" | "info";
+
+type RoleTask = {
+  actionLabel: string;
+  description: string;
+  href: string;
+  meta: string;
+  title: string;
+  tone: TaskTone;
+};
+
+const publicRolePanels = [
+  {
+    actionLabel: "공대 만들기",
+    description: "주간 일정, 공대 편성, 알림 실패까지 출발 전 운영 항목을 묶어서 봅니다.",
+    href: "/groups/new",
+    items: ["주간 일정 확정", "공대 편성 점검", "가능 시간 미입력 확인"],
+    title: "공대장 업무",
+    tone: "info" as const,
+  },
+  {
+    actionLabel: "초대 후 참여",
+    description: "내 가능 시간, 레이드 신청, 캐릭터 숙제를 같은 흐름에서 갱신합니다.",
+    href: "/auth/signup",
+    items: ["내 가능 시간 입력", "레이드 신청 상태 확인", "숙제 체크 갱신"],
+    title: "공대원 업무",
+    tone: "success" as const,
+  },
+];
+
+const weeklyFlow = [
+  ["월", "가능 시간 수집", "공대원이 이번 주 실제 출발 가능한 시간대를 등록"],
+  ["화", "신청 정리", "레이드별 신청과 캐릭터 조건을 같은 기준으로 확인"],
+  ["수", "편성 확정", "빈 슬롯, 대체 인원, 알림 실패를 출발 전에 점검"],
+  ["목", "리셋 후 숙제", "완료 상태를 갱신하고 다음 주 반복 업무로 넘김"],
+];
+
+function PublicRolePanel({
+  actionLabel,
+  description,
+  href,
+  items,
+  title,
+  tone,
+}: {
+  actionLabel: string;
+  description: string;
+  href: string;
+  items: string[];
+  title: string;
+  tone: TaskTone;
+}) {
+  return (
+    <SectionPanel
+      action={<Badge tone={tone}>역할</Badge>}
+      description={description}
+      title={title}
+    >
+      <div className="divide-y divide-slate-100 rounded-md border border-slate-100">
+        {items.map((item) => (
+          <div className="px-3 py-2.5 text-sm font-medium text-slate-800" key={item}>
+            {item}
+          </div>
+        ))}
+      </div>
+      <Link className={cx(secondaryButtonClassName, "mt-3")} href={href}>
+        {actionLabel}
+      </Link>
+    </SectionPanel>
+  );
+}
+
+function RoleTaskList({ tasks }: { tasks: RoleTask[] }) {
+  return (
+    <div className="divide-y divide-slate-100 rounded-md border border-slate-100">
+      {tasks.map((task) => (
+        <Link
+          className="group grid gap-1.5 px-3 py-3 transition hover:bg-slate-50"
+          href={task.href}
+          key={task.title}
+        >
+          <span className="flex flex-wrap items-start justify-between gap-2">
+            <span className="text-sm font-semibold text-slate-950">{task.title}</span>
+            <Badge tone={task.tone}>{task.meta}</Badge>
+          </span>
+          <span className="text-sm leading-6 text-slate-600">{task.description}</span>
+          <span className="text-xs font-semibold text-teal-800 transition group-hover:text-teal-950">
+            {task.actionLabel}
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const member = await getCurrentMember();
   const user = member ? null : await getCurrentUser();
@@ -23,19 +118,21 @@ export default async function HomePage() {
   if (!member) {
     return (
       <main className={pageShellClassName}>
-        <section className={cx(balancedPanelGridClassName, "lg:items-start")}>
-          <div className="rounded-lg border border-slate-200/90 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8">
-            <div className="text-sm font-semibold text-teal-700">LOST ARK PARTY</div>
-            <h1 className="mt-2 max-w-3xl text-3xl font-semibold text-slate-950 sm:text-4xl">
-              로스트아크 고정 공대 운영을 한곳에서 정리합니다
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.86fr)] lg:items-start">
+          <div className="min-w-0 py-2 lg:pr-6">
+            <div className="inline-flex rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">
+              LOST ARK PARTY
+            </div>
+            <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight text-slate-950 sm:text-4xl">
+              공대장과 공대원이 같은 주간판을 봅니다
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
               Lost Ark Party는 고정 공대장이 매주 반복하는 가능 시간 조사,
-              레이드 일정 확정, 캐릭터 숙제 확인, 참석 상태 공유를 정리하는
-              한국어 운영 도구입니다. 공개 페이지에서는 공대 운영 방식과 일정
-              조율 기준을 설명하고, 가입 후에는 공대 내부 자료만 따로 관리합니다.
+              레이드 신청, 공대 편성, 캐릭터 숙제 확인을 역할별 업무 흐름으로
+              정리하는 한국어 운영 도구입니다. 공개 페이지는 운영 기준을 설명하고,
+              가입 후에는 공대 내부 자료만 따로 관리합니다.
             </p>
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {user ? (
                 <>
                   <Link className={primaryButtonClassName} href="/groups/new">
@@ -70,81 +167,152 @@ export default async function HomePage() {
               </p>
             ) : null}
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <div className="text-sm font-semibold text-teal-700">주간 운영판</div>
-                <div className="mt-1 text-xl font-semibold text-slate-950">
-                  목요일 리셋 기준 예시
-                </div>
-              </div>
-              <div className="rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">
-                공개 예시
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3">
-              {[
-                ["월", "가능 시간 수집", "공대원이 이번 주 가능한 시간대를 등록"],
-                ["화", "캐릭터 확인", "레이드별 필요 레벨과 보유 캐릭터를 대조"],
-                ["수", "출석 확정", "대체 인원과 빈 슬롯을 확인하고 일정 고정"],
-                ["목", "리셋 후 점검", "완료 상태와 다음 주 반복 일정을 정리"],
-              ].map(([day, title, description]) => (
-                <div
-                  className="grid grid-cols-[2.75rem_1fr] gap-3 rounded-md border border-slate-200 bg-slate-50/70 p-3"
-                  key={day}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-teal-700 text-sm font-semibold text-white">
+          <div className="grid gap-3">
+            {publicRolePanels.map((panel) => (
+              <PublicRolePanel key={panel.title} {...panel} />
+            ))}
+          </div>
+        </section>
+        <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <SectionPanel
+            action={<Badge tone="info">목요일 리셋</Badge>}
+            description="출발 전 확인할 항목을 요일별로 좁혀 봅니다."
+            title="주간 운영판 예시"
+          >
+            <div className="grid gap-2">
+              {weeklyFlow.map(([day, title, description]) => (
+                <div className="grid grid-cols-[2.5rem_1fr] gap-3 px-1 py-2" key={day}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-900 text-sm font-semibold text-white">
                     {day}
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-slate-950">{title}</div>
-                    <div className="mt-1 text-sm leading-6 text-slate-600">
+                    <div className="mt-0.5 text-sm leading-6 text-slate-600">
                       {description}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-        <section className="mt-5 grid gap-3 lg:grid-cols-3">
-          {[
-            [
-              "고정 공대 운영 체크리스트",
-              "출발 전 확인해야 할 가능 시간, 레이드 템플릿, 참여 캐릭터, 알림 상태를 같은 기준으로 정리합니다.",
-            ],
-            [
-              "공개 콘텐츠와 내부 데이터 분리",
-              "운영 방식과 개인정보 처리 안내는 공개하고, 공대별 일정과 캐릭터 기록은 로그인한 멤버에게만 보여줍니다.",
-            ],
-            [
-              "로스트아크 팬 도구",
-              "이 사이트는 로스트아크 공대 운영을 돕는 비공식 도구이며 Smilegate RPG 또는 STOVE와 제휴되어 있지 않습니다.",
-            ],
-          ].map(([title, description]) => (
-            <article
-              className="rounded-lg border border-slate-200/90 bg-white p-5 shadow-sm shadow-slate-200/60"
-              key={title}
-            >
-              <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-            </article>
-          ))}
+          </SectionPanel>
+          <SectionPanel
+            description="광고 심사와 검색 노출에 필요한 공개 안내는 유지하고, 실제 공대 기록은 멤버에게만 보여줍니다."
+            title="고정 공대 운영 체크리스트"
+          >
+            <div className="grid gap-2 text-sm leading-6 text-slate-600">
+              <p>
+                출발 전 확인해야 할 가능 시간, 레이드 템플릿, 참여 캐릭터,
+                알림 상태를 같은 기준으로 정리합니다.
+              </p>
+              <p>
+                이 사이트는 로스트아크 공대 운영을 돕는 비공식 도구이며
+                Smilegate RPG 또는 STOVE와 제휴되어 있지 않습니다.
+              </p>
+            </div>
+          </SectionPanel>
         </section>
       </main>
     );
   }
 
   const summary = await getDashboardSummary(member.groupId);
+  const upcomingScheduleCount = summary.upcomingSchedules.length;
+  const memberRoleText = member.role === "LEADER" ? "공대장" : "공대원";
+  const missingAvailabilityTone =
+    summary.missingAvailabilityCount > 0 ? "warning" : "success";
+  const failedNotificationTone = summary.failedNotifications > 0 ? "danger" : "success";
+  const leaderTasks: RoleTask[] = [
+    {
+      actionLabel: "주간 일정 열기",
+      description: "확정 일정과 아직 시간 배정이 안 된 공대 편성을 함께 확인합니다.",
+      href: "/weekly",
+      meta: `${upcomingScheduleCount}건`,
+      title: "이번 주 일정 확정",
+      tone: upcomingScheduleCount > 0 ? "success" : "warning",
+    },
+    {
+      actionLabel: "편성 보드 열기",
+      description: "레이드별 슬롯, 캐릭터, 대체 인원을 출발 전 기준으로 맞춥니다.",
+      href: "/sets",
+      meta: `${summary.memberCount}명`,
+      title: "공대 편성 점검",
+      tone: "info",
+    },
+    {
+      actionLabel: "가능 시간 보기",
+      description: "이번 주 가능 시간을 아직 입력하지 않은 인원을 확인합니다.",
+      href: "/calendar",
+      meta: `${summary.missingAvailabilityCount}명`,
+      title: "가능 시간 미입력 확인",
+      tone: missingAvailabilityTone,
+    },
+    {
+      actionLabel: "알림 상태 보기",
+      description: "Discord 알림 실패가 있으면 재전송 전 설정을 점검합니다.",
+      href: "/notifications",
+      meta: `${summary.failedNotifications}건`,
+      title: "실패 알림 처리",
+      tone: failedNotificationTone,
+    },
+  ];
+  const memberTasks: RoleTask[] = [
+    {
+      actionLabel: "내 시간 갱신",
+      description: "이번 주 실제로 출발 가능한 시간과 조율 가능한 시간을 표시합니다.",
+      href: "/calendar",
+      meta: "이번 주",
+      title: "내 가능 시간 입력",
+      tone: missingAvailabilityTone,
+    },
+    {
+      actionLabel: "신청판 열기",
+      description: "열려 있는 레이드 신청에 내 캐릭터와 메모를 남깁니다.",
+      href: "/signup",
+      meta: "참여",
+      title: "레이드 신청 확인",
+      tone: "info",
+    },
+    {
+      actionLabel: "숙제판 열기",
+      description: "캐릭터별 주간 레이드 완료 상태를 공대 기준으로 맞춥니다.",
+      href: "/homework",
+      meta: "주간",
+      title: "숙제 체크 갱신",
+      tone: "success",
+    },
+    {
+      actionLabel: "명단 확인",
+      description: "닉네임, 권한, 캐릭터 등록 상태를 같은 명단에서 확인합니다.",
+      href: "/members",
+      meta: `${summary.memberCount}명`,
+      title: "공대원 정보 확인",
+      tone: "neutral",
+    },
+  ];
 
   return (
     <main className={pageShellClassName}>
       <PageHeader
-        description={`${member.group.name}의 일정, 출석, 캐릭터 등록 상태를 빠르게 확인합니다.`}
-        eyebrow="공대 운영"
-        title="대시보드"
+        action={
+          <>
+            <Link className={secondaryButtonClassName} href="/calendar">
+              가능 시간 입력
+            </Link>
+            <Link className={primaryButtonClassName} href="/weekly">
+              주간판 열기
+            </Link>
+          </>
+        }
+        description={`${member.group.name}의 일정, 편성, 신청, 숙제를 공대장과 공대원 업무로 나눠 확인합니다.`}
+        eyebrow={`${member.group.name} / ${memberRoleText}`}
+        title="오늘의 공대 작업판"
       />
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          detail="출발 전 자리와 참석 상태를 확인할 일정"
+          label="예정 일정"
+          value={upcomingScheduleCount}
+        />
         <MetricCard
           detail="현재 공대에 참여 중인 인원"
           label="공대원"
@@ -161,9 +329,37 @@ export default async function HomePage() {
           value={summary.failedNotifications}
         />
       </div>
-      <SectionPanel className="mt-5" title="다가오는 레이드">
+      <section className="mt-5 grid gap-4 lg:grid-cols-2">
+        <SectionPanel
+          action={<Badge tone="info">운영</Badge>}
+          description="공대장이 이번 주 출발 전에 확인해야 하는 항목입니다."
+          title="공대장 업무"
+        >
+          <RoleTaskList tasks={leaderTasks} />
+        </SectionPanel>
+        <SectionPanel
+          action={<Badge tone="success">참여</Badge>}
+          description="공대원이 직접 갱신하거나 확인해야 하는 항목입니다."
+          title="공대원 업무"
+        >
+          <RoleTaskList tasks={memberTasks} />
+        </SectionPanel>
+      </section>
+      <SectionPanel
+        className="mt-5"
+        description="확정 일정은 출발 전 자리 배정과 참석 체크를 다시 확인합니다."
+        title="다가오는 레이드"
+      >
         {summary.upcomingSchedules.length === 0 ? (
-          <EmptyState title="다가오는 일정이 없습니다." />
+          <EmptyState
+            action={
+              <Link className={secondaryButtonClassName} href="/weekly">
+                주간 일정 확인
+              </Link>
+            }
+            description="먼저 가능 시간을 모은 뒤 주간판에서 확정 일정을 만들 수 있습니다."
+            title="다가오는 일정이 없습니다."
+          />
         ) : (
           <div className={balancedCardGridClassName}>
             {summary.upcomingSchedules.map((schedule) => (

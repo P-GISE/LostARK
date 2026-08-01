@@ -157,14 +157,22 @@ export async function getCurrentUser() {
 
 export async function getCurrentMember() {
   const cookieStore = await cookies();
+  const rawUserId = cookieStore.get(USER_COOKIE_NAME)?.value;
+  const userId = rawUserId ? verifySessionValue(rawUserId) : null;
   const rawMemberId = cookieStore.get(MEMBER_COOKIE_NAME)?.value;
   const memberId = rawMemberId ? verifySessionValue(rawMemberId) : null;
   if (!memberId) return null;
 
-  return db.member.findUnique({
+  const member = await db.member.findUnique({
     where: { id: memberId },
     include: { group: true, user: true },
   });
+
+  if (userId && member?.userId !== userId) {
+    return null;
+  }
+
+  return member;
 }
 
 export async function requireCurrentUser() {
@@ -204,6 +212,19 @@ export async function getFirstMemberForUser(userId: string) {
   });
 }
 
+export async function getMemberForUserInGroup(input: {
+  userId: string;
+  groupId: string;
+}) {
+  return db.member.findFirst({
+    where: {
+      groupId: input.groupId,
+      userId: input.userId,
+    },
+    include: { group: true },
+  });
+}
+
 export async function setCurrentUserSession(userId: string) {
   const cookieStore = await cookies();
   cookieStore.set(
@@ -220,6 +241,11 @@ export async function setCurrentMemberSession(memberId: string) {
     signSessionValue(memberId),
     sessionCookieOptions,
   );
+}
+
+export async function clearCurrentMemberSession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(MEMBER_COOKIE_NAME);
 }
 
 export async function clearCurrentSessions() {

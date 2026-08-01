@@ -12,6 +12,9 @@ type OperationalSettingsInput = {
   readonly raidReminderLeadMinutes: number;
   readonly availabilityChangeNoticeEnabled: boolean;
   readonly discordChannelId?: string | null;
+  readonly discordGuildId?: string | null;
+  readonly discordRecruitmentChannelId?: string | null;
+  readonly discordAnnouncementChannelId?: string | null;
 };
 
 export class GroupSettingsValidationError extends Error {
@@ -70,7 +73,12 @@ export async function updateGroupOperationalSettings(
       availabilityChangeNoticeEnabled: input.availabilityChangeNoticeEnabled,
       dailyDiscordSummaryEnabled: input.dailyDiscordSummaryEnabled,
       dailyDiscordSummaryTime: parseTimeText(input.dailyDiscordSummaryTime),
+      discordAnnouncementChannelId:
+        input.discordAnnouncementChannelId?.trim() || null,
       discordChannelId: input.discordChannelId?.trim() || null,
+      discordGuildId: input.discordGuildId?.trim() || null,
+      discordRecruitmentChannelId:
+        input.discordRecruitmentChannelId?.trim() || null,
       groupId: input.groupId,
       raidReminderLeadMinutes: parseReminderMinutes(
         input.raidReminderLeadMinutes,
@@ -82,7 +90,12 @@ export async function updateGroupOperationalSettings(
       availabilityChangeNoticeEnabled: input.availabilityChangeNoticeEnabled,
       dailyDiscordSummaryEnabled: input.dailyDiscordSummaryEnabled,
       dailyDiscordSummaryTime: parseTimeText(input.dailyDiscordSummaryTime),
+      discordAnnouncementChannelId:
+        input.discordAnnouncementChannelId?.trim() || null,
       discordChannelId: input.discordChannelId?.trim() || null,
+      discordGuildId: input.discordGuildId?.trim() || null,
+      discordRecruitmentChannelId:
+        input.discordRecruitmentChannelId?.trim() || null,
       raidReminderLeadMinutes: parseReminderMinutes(
         input.raidReminderLeadMinutes,
       ),

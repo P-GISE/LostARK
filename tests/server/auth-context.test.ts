@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  getCurrentMember,
   requireCurrentMember,
   signSessionValue,
   verifySessionValue,
@@ -7,6 +8,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   cookies: vi.fn(),
+  memberFindUnique: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT:${path}`);
   }),
@@ -18,6 +20,14 @@ vi.mock("next/headers", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
+}));
+
+vi.mock("@/server/db", () => ({
+  db: {
+    member: {
+      findUnique: mocks.memberFindUnique,
+    },
+  },
 }));
 
 describe("auth context session values", () => {
@@ -74,5 +84,46 @@ describe("auth context session values", () => {
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/auth/login?next=%2Fmembers",
     );
+  });
+
+  it("rejects a member cookie that belongs to a different logged-in user", async () => {
+    mocks.cookies.mockResolvedValue({
+      get: vi.fn((name: string) => {
+        if (name === "lostark_party_user") {
+          return { value: signSessionValue("user-2") };
+        }
+        if (name === "lostark_party_member") {
+          return { value: signSessionValue("member-1") };
+        }
+        return undefined;
+      }),
+    });
+    mocks.memberFindUnique.mockResolvedValue({
+      id: "member-1",
+      userId: "user-1",
+    });
+
+    await expect(getCurrentMember()).resolves.toBeNull();
+  });
+
+  it("accepts a member cookie that belongs to the logged-in user", async () => {
+    const member = {
+      id: "member-1",
+      userId: "user-1",
+    };
+    mocks.cookies.mockResolvedValue({
+      get: vi.fn((name: string) => {
+        if (name === "lostark_party_user") {
+          return { value: signSessionValue("user-1") };
+        }
+        if (name === "lostark_party_member") {
+          return { value: signSessionValue("member-1") };
+        }
+        return undefined;
+      }),
+    });
+    mocks.memberFindUnique.mockResolvedValue(member);
+
+    await expect(getCurrentMember()).resolves.toBe(member);
   });
 });
