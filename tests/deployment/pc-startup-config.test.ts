@@ -12,6 +12,8 @@ describe("PC production startup config", () => {
     expect(script).toContain("Start-Process");
     expect(script).toContain("pc-cloudflared.pid");
     expect(script).toContain("https://lostark-party.pigs0516.com/");
+    expect(script).toContain("https://pigs0516.com/");
+    expect(script).toContain("https://www.pigs0516.com/");
     expect(script).toContain("https://pc.pigs0516.com/");
   });
 
@@ -21,6 +23,7 @@ describe("PC production startup config", () => {
     expect(script).toContain("start-pc-production.ps1");
     expect(script).toContain("LostArk Party Planner Server");
     expect(script).toContain("-Port $Port");
+    expect(script).toContain("-RestartApp");
   });
 
   it("updates startup with the combined PC production launcher", () => {
@@ -29,7 +32,20 @@ describe("PC production startup config", () => {
     expect(script).toContain("start-pc-production.ps1");
     expect(script).toContain("LostArk Party Planner Server");
     expect(script).toContain("-Port $Port");
+    expect(script).toContain("-RestartApp");
     expect(script).not.toContain("start-prod-server.ps1");
+  });
+
+  it("waits for the local origin and rejects mismatched tunnel ports", () => {
+    const script = readFileSync("scripts/start-pc-production.ps1", "utf8");
+
+    expect(script).toContain("Wait-LocalOrigin");
+    expect(script).toContain("OriginHealthTimeoutSeconds");
+    expect(script).toContain("RequiredTunnelHostnames");
+    expect(script).toContain("pigs0516.com");
+    expect(script).toContain("www.pigs0516.com");
+    expect(script).toContain("Cloudflare tunnel config does not route");
+    expect(script).toContain("http://127\\.0\\.0\\.1:$OriginPort\\b");
   });
 
   it("checks PC production env before starting Next.js", () => {

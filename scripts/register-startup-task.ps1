@@ -11,7 +11,7 @@ $taskLog = Join-Path $projectRoot "scheduled-task.log"
 
 $action = New-ScheduledTaskAction `
   -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$pcLauncherScript`" -Port $Port"
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$pcLauncherScript`" -Port $Port -RestartApp"
 
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet `

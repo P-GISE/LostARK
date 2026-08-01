@@ -7,6 +7,7 @@ const eslintConfig = [
       ".headroom-python/**",
       ".superpowers/**",
       ".next/**",
+      "backups/**",
       "node_modules/**",
       "디스코드 봇/**",
       "coverage/**",

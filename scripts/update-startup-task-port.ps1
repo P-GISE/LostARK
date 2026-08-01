@@ -9,7 +9,7 @@ $pcLauncherScript = Join-Path $projectRoot "scripts\start-pc-production.ps1"
 $taskName = "LostArk Party Planner Server"
 $taskLog = Join-Path $projectRoot "scheduled-task-action.log"
 $errorLog = Join-Path $projectRoot "scheduled-task-action.err.log"
-$argument = "-NoProfile -ExecutionPolicy Bypass -File `"$pcLauncherScript`" -Port $Port"
+$argument = "-NoProfile -ExecutionPolicy Bypass -File `"$pcLauncherScript`" -Port $Port -RestartApp"
 
 try {
   "Updating $taskName to port $Port" |

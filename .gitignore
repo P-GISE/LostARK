@@ -14,5 +14,8 @@ playwright-report/
 .superpowers/
 *.log
 *.pid
+tsconfig.tsbuildinfo
 backups/*.sql
 backups/*.dump
+backups/codex-review-fixes-*/
+backups/codex-role-ui-*/

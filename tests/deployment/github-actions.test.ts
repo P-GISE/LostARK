@@ -26,6 +26,9 @@ describe("GitHub Actions VPS deployment workflow", () => {
     expect(workflow).toContain("VPS host did not respond on the tailnet");
     expect(workflow).toContain("steps.vps-host.outputs.reachable == 'true'");
     expect(workflow).toContain('tailscale ssh "${VPS_USER}@${VPS_HOST}"');
+    expect(workflow).toContain(
+      "sudo -n env VPS_APP_DIR='${VPS_APP_DIR}' bash -s",
+    );
     expect(workflow).not.toContain("appleboy/ssh-action");
     expect(workflow).not.toContain("secrets.VPS_SSH_KEY");
   });

@@ -128,7 +128,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
-          tailscale ssh "${VPS_USER}@${VPS_HOST}" "VPS_APP_DIR='${VPS_APP_DIR}' bash -s" <<'REMOTE'
+          tailscale ssh "${VPS_USER}@${VPS_HOST}" "sudo -n env VPS_APP_DIR='${VPS_APP_DIR}' bash -s" <<'REMOTE'
             set -euo pipefail
             git config --global --add safe.directory "${VPS_APP_DIR}" || true
             cd "${VPS_APP_DIR}"

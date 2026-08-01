@@ -5,6 +5,6 @@ This creates a scheduled Lambda that checks `https://pc.pigs0516.com/` every fiv
 - If the PC tunnel is healthy, it points `lostark-party.pigs0516.com` and `pigs0516.com` to the PC tunnel and stops the EC2 backup.
 - If the PC tunnel is unhealthy, it starts the EC2 instance and points the public hostnames to the AWS tunnel.
 
-Deploy this in AWS region `ap-southeast-2`.
+Deploy this in AWS region `ap-southeast-2`, where the current backup EC2 host runs.
 
 The Cloudflare token is passed as a CloudFormation `NoEcho` parameter. Do not commit it.

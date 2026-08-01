@@ -27,7 +27,7 @@ describe("test environment database safety", () => {
   it("replaces non-local DATABASE_URL values with the safe local test database", () => {
     const env = {
       DATABASE_URL: "postgresql://lostark:secret@100.64.0.10:5432/lostark_party",
-    } as NodeJS.ProcessEnv;
+    };
 
     expect(configureSafeTestDatabaseUrl(env)).toBe(SAFE_TEST_DATABASE_URL);
     expect(env.DATABASE_URL).toBe(SAFE_TEST_DATABASE_URL);
@@ -39,7 +39,7 @@ describe("test environment database safety", () => {
     const env = {
       DATABASE_URL: "postgresql://lostark:secret@100.64.0.10:5432/lostark_party",
       TEST_DATABASE_URL: testDatabaseUrl,
-    } as NodeJS.ProcessEnv;
+    };
 
     expect(configureSafeTestDatabaseUrl(env)).toBe(testDatabaseUrl);
     expect(env.DATABASE_URL).toBe(testDatabaseUrl);

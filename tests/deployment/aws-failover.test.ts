@@ -6,6 +6,13 @@ function read(path: string) {
 }
 
 describe("AWS failover deployment artifacts", () => {
+  it("documents the current AWS operating region", () => {
+    const readme = read("infra/aws-failover/README.md");
+
+    expect(readme).toContain("AWS region `ap-southeast-2`");
+    expect(readme).not.toContain("AWS region `us-east-1`");
+  });
+
   it("defines the Lambda controller inputs and EC2 actions", () => {
     const lambda = read("infra/aws-failover/lambda_function.py");
 
