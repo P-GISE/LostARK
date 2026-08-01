@@ -113,7 +113,7 @@ describe("GitHub Actions VPS deployment workflow", () => {
       'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_TAILSCALE_IP}"',
     );
     expect(workflow).toContain(
-      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
+      'ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}"',
     );
     expect(workflow).toContain("AWS public SSH retry");
     expect(workflow).toContain('if [ "${status}" -ne 255 ] || [ "${attempt}" -eq 5 ]; then');

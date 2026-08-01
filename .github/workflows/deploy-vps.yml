@@ -300,7 +300,7 @@ jobs:
           fi
 
           for attempt in $(seq 1 5); do
-            if ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
+            if ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
               "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
               exit 0
             fi
