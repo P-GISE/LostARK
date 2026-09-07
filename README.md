@@ -8,6 +8,28 @@
 https://lostark-party.pigs0516.com
 ```
 
+## 한눈에 보기
+
+| 항목 | 내용 |
+| --- | --- |
+| 한국어 프로젝트명 | 로스트아크 파티 모집 서비스 |
+| 저장소 성격 | 실제 운영까지 고려한 게임 커뮤니티 일정 관리 웹 서비스 |
+| 주요 사용자 | 공대장, 고정 파티원, 레이드 참여자 |
+| 실행 형태 | Next.js App Router 서버 애플리케이션 |
+| DB | PostgreSQL + Prisma |
+| 외부 연동 | Discord OAuth/봇, Lost Ark Open API |
+| 운영 구성 | PC primary 서버와 AWS backup failover 실험 |
+
+## 서비스 사용 흐름
+
+1. 사용자가 회원가입하거나 초대 링크로 그룹에 들어옵니다.
+2. 그룹장은 레이드 템플릿을 만들고 주간/일정 단위로 모집을 엽니다.
+3. 멤버는 가능한 시간을 등록하고, 모집 카드에서 참여 의사를 표시합니다.
+4. 그룹장은 가능 시간과 캐릭터 정보를 보며 파티 슬롯을 배정합니다.
+5. 일정이 확정되면 참여자에게 Discord 알림 또는 리마인더가 전달됩니다.
+6. 캐릭터 worker는 Lost Ark Open API를 통해 대표 캐릭터와 원정대 정보를 갱신합니다.
+7. 운영자는 관리자 화면에서 사용자, 그룹, 일정 데이터를 관리합니다.
+
 ## 주요 기능
 
 - 그룹 초대와 멤버 관리
@@ -72,20 +94,36 @@ http://localhost:3000
 
 ## 주요 환경변수
 
-```text
-DATABASE_URL
-APP_BASE_URL
-APP_DOMAIN
-SESSION_SECRET
-ADMIN_EMAILS
-DISCORD_CLIENT_ID
-DISCORD_CLIENT_SECRET
-DISCORD_BOT_TOKEN
-DISCORD_REDIRECT_URI
-LOSTARK_OPEN_API_JWT
-```
+| 변수 | 설명 |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL 접속 문자열입니다. |
+| `APP_BASE_URL` | 초대 링크, OAuth redirect, 공유 URL에 쓰는 앱 기준 주소입니다. |
+| `APP_DOMAIN` | 세션 쿠키 도메인 판단에 사용합니다. |
+| `SESSION_SECRET` | 세션 서명용 비밀값입니다. 공개 금지입니다. |
+| `ADMIN_EMAILS` | 관리자 권한을 부여할 이메일 목록입니다. |
+| `DISCORD_CLIENT_ID` | Discord OAuth 애플리케이션 ID입니다. |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth secret입니다. 공개 금지입니다. |
+| `DISCORD_BOT_TOKEN` 또는 `DISCORD_TOKEN` | Discord DM/봇 기능용 토큰입니다. 공개 금지입니다. |
+| `DISCORD_REDIRECT_URI` | Discord OAuth callback URL입니다. |
+| `LOSTARK_OPEN_API_JWT` | Lost Ark Open API 인증 토큰입니다. 공개 금지입니다. |
 
 실제 값은 `.env`에만 두고 GitHub에 커밋하지 않습니다.
+
+## 주요 화면과 API
+
+- `/`: 공개 소개와 시작 화면
+- `/auth/login`, `/auth/signup`: 로그인과 회원가입
+- `/groups/new`: 새 그룹 생성
+- `/invite/[inviteCode]`: 초대 링크 입장
+- `/weekly`, `/calendar`: 주간 일정과 캘린더
+- `/schedules`, `/schedules/[scheduleId]`: 일정 목록과 상세
+- `/sets`: 레이드 세트/파티 구성
+- `/signup`: 모집 현황과 신청
+- `/members`: 멤버와 캐릭터 관리
+- `/notifications`: 알림 내역
+- `/settings`: 그룹 운영 설정
+- `/admin`: 관리자 대시보드
+- `/api/bot/*`: Discord 봇이 사이트 데이터를 조회/변경하는 API
 
 ## 구현 포인트
 
@@ -108,6 +146,16 @@ E2E 검증이 필요할 때:
 ```bash
 npm run test:e2e
 ```
+
+## 운영 worker
+
+```bash
+npm run worker:notifications
+npm run worker:characters
+```
+
+- `worker:notifications`: 일정 생성/리마인더/봇 outbox 메시지 처리를 담당합니다.
+- `worker:characters`: Lost Ark Open API를 이용해 캐릭터 정보를 주기적으로 갱신합니다.
 
 ## 운영 문서
 
