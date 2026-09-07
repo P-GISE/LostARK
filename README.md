@@ -20,6 +20,33 @@ https://lostark-party.pigs0516.com
 | 외부 연동 | Discord OAuth/봇, Lost Ark Open API |
 | 운영 구성 | PC primary 서버와 AWS backup failover 실험 |
 
+## 소스 검토 기준
+
+이 README는 `src/app`, `src/server`, `src/worker`, `src/app/api/bot`, `prisma/schema.prisma`, `tests`, `tests/e2e`, `infra`, `package.json`, 환경변수 예시 파일을 기준으로 다시 작성했습니다. 실제 `.env`, DB 데이터, Discord 토큰, `node_modules`, 빌드 산출물은 제외했습니다.
+
+검토 결과 이 저장소는 “파티 모집 게시판”만이 아니라 일정 관리, 레이드 템플릿, 참여 가능 시간, 캐릭터 숙제, Discord OAuth, 봇 연동 API, 알림 outbox, 운영 worker, AWS failover 실험까지 포함한 길드 운영용 Next.js 서비스입니다.
+
+## 소스 기준 기능 지도
+
+| 기능 영역 | 확인한 주요 파일 | 실제로 구현된 내용 |
+| --- | --- | --- |
+| 화면 라우트 | `src/app/**/page.tsx` | 홈, 로그인/가입, 그룹 초대, 일정, 주간표, 숙제, 멤버, 알림, 관리자, 설정, 가이드 화면 |
+| API 라우트 | `src/app/api/**/*.ts` | Discord OAuth callback, 봇 health/context/templates/signups/outbox, 초대 활성화 API |
+| 서버 도메인 | `src/server/*.ts` | 인증/세션, 그룹/멤버, 권한, 일정, 레이드 템플릿/세트/신청, 캐릭터, 알림, Discord 연동 |
+| DB 모델 | `prisma/schema.prisma` | 그룹, 사용자, 멤버, 캐릭터, 가능 시간, 레이드 템플릿, 일정, 출석, 알림 작업, 봇 outbox, 레이드 신청 모델 |
+| 봇 연동 | `src/app/api/bot`, `src/server/bot-api-auth.ts`, `src/server/discord*.ts` | Discord 봇이 웹 서비스의 모집/신청/템플릿 정보를 읽고 상태를 반영하는 계약 |
+| 운영 worker | `src/worker/notification-worker.ts`, `src/worker/character-sync-worker.ts` | 알림 발송 큐 처리와 Lost Ark 캐릭터 정보 동기화 |
+| 테스트 | `tests/**/*.test.ts`, `tests/e2e/*.spec.ts` | 서버 도메인, API 계약, 화면 동작, 초대/신청/알림 흐름 검증 |
+| 인프라 | `infra/aws-failover`, `docker-compose.yml`, `scripts/*.sh` | PC primary 서버와 AWS backup 서버를 고려한 운영 실험 |
+
+## 처음 검토할 때 볼 순서
+
+1. `prisma/schema.prisma`에서 서비스가 다루는 핵심 도메인을 먼저 확인합니다.
+2. `src/app`의 page 파일을 보면 사용자가 보는 화면과 URL 구조가 보입니다.
+3. `src/server`를 보면 화면/API 뒤의 실제 업무 규칙이 보입니다.
+4. `src/app/api/bot`과 `src/server/bot-api-auth.ts`를 보면 Discord 봇과 웹 서비스가 어떤 계약으로 연결되는지 알 수 있습니다.
+5. `tests`와 `e2e`를 보면 회귀 방지 대상으로 잡은 핵심 흐름을 확인할 수 있습니다.
+
 ## 서비스 사용 흐름
 
 1. 사용자가 회원가입하거나 초대 링크로 그룹에 들어옵니다.
