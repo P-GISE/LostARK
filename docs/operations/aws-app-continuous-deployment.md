@@ -10,7 +10,7 @@ AWS /opt/lostark-party의 web·worker·character-worker만 교체한다. 대표 
 
 ## 신뢰 경계
 
-고정 설치 위치는 /usr/local/lib/lostark-deploy다. prepare-pull-install.py는 정확한 Git commit의 blob을 새 로컬 staging으로 추출하고 SHA256·보호 경로 목록·초기 runtime image/Compose hash를 reviewed.json에 기록한다. dirty working copy와 기존 staging을 사용하지 않는다. 보호 경로는 .github/, deploy/, scripts/, prisma/, Dockerfile, .dockerignore, docker-compose로 시작하는 루트 파일이다. 추가·삭제·변경을 자동 적용하지 않으며 검토 후 고정 설치본과 manifest를 함께 갱신해야 한다.
+고정 설치 위치는 /usr/local/lib/lostark-deploy다. prepare-pull-install.py는 정확한 Git commit의 blob을 새 로컬 staging으로 추출하고 SHA256·보호 경로 목록·초기 runtime image/Compose hash를 reviewed.json에 기록한다. dirty working copy와 기존 staging을 사용하지 않는다. 보호 경로는 .github/, deploy/, scripts/, prisma/, Dockerfile, .dockerignore, package.json, docker-compose로 시작하는 루트 파일이다. 추가·삭제·변경을 자동 적용하지 않으며 검토 후 고정 설치본과 manifest를 함께 갱신해야 한다. package.json의 start/prestart/worker lifecycle이 migration을 추가할 수 있어 파일 전체를 보호하며, 그 안의 의존성 변경도 수동 검토 대상이다.
 
 artifact는 run ID·SHA·main·이름 유일성·만료·GitHub digest·실제 byte 수를 검사한다. ZIP은 정해진9개 일반 파일만 허용하고 중복·경로탈출·링크·기타 파일을 차단한다. bundle의 shell/Python/Compose는 설치본과 byte 비교하고 **실행은 root 소유 고정 설치본만** 사용한다. 다운로드 최대10분/2GiB, 펼친 합계4GiB, 각 metadata1MiB 상한과 staging/image/rollback 디스크를 검사한다. GitHub 요청은 ubuntu 기존 인증으로 실행하고 원문 오류·환경값·signed URL을 로그로 남기지 않는다.
 

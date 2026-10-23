@@ -86,7 +86,7 @@ def protected_tree(tree):
     for item in tree['tree']:
         path = item['path']
         guarded = (any(path == p[:-1] or path.startswith(p) for p in ('.github/', 'deploy/', 'scripts/', 'prisma/'))
-                   or path in ('Dockerfile', '.dockerignore') or path.startswith('docker-compose'))
+                   or path in ('Dockerfile', '.dockerignore', 'package.json') or path.startswith('docker-compose'))
         if guarded and item['type'] != 'tree':
             require(item['type'] == 'blob' and item.get('mode', '100644') in ('100644', '100755'),
                     'Unsupported protected source entry')

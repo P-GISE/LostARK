@@ -46,6 +46,15 @@ class PullTests(unittest.TestCase):
         return dict(id=29, name='lostark-aws-'+SHA, expired=False, size_in_bytes=10,
                     digest='sha256:'+'d'*64, workflow_run={'id':17,'head_sha':SHA,'head_branch':'main'})
 
+    def test_npm_lifecycle_migration_change_requires_review_without_schema_changes(self):
+        original={'scripts':{'start':'next start','worker:notifications':'tsx src/worker/notification-worker.ts'}}
+        changed={'scripts':dict(original['scripts'],prestart='prisma migrate deploy')}
+        def tree(package):
+            return {'truncated':False,'tree':[
+                {'path':'package.json','type':'blob','sha':hashlib.sha1(json.dumps(package).encode()).hexdigest()},
+                {'path':'prisma/schema.prisma','type':'blob','sha':'f'*40}]}
+        self.assertNotEqual(pull.protected_tree(tree(original)),pull.protected_tree(tree(changed)))
+
     def test_artifact_identity_expiry_digest_size_and_duplicates(self):
         a=self.artifact()
         self.assertEqual(pull.select_artifact({'artifacts':[a]},17,SHA)['id'],29)
