@@ -10,5 +10,5 @@ Group=root
 UMask=0077
 ExecStart=/usr/bin/python3 /usr/local/lib/lostark-deploy/pull-aws-app.py
 TimeoutStartSec=30min
-TimeoutStopSec=5min
+TimeoutStopSec=20min
 KillMode=control-group

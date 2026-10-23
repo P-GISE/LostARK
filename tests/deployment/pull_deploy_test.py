@@ -118,10 +118,11 @@ class PullTests(unittest.TestCase):
                     if failure=='deploy':raise RuntimeError('synthetic failure')
                     (app/'.last-app-deployment').write_text(SHA+' '+NEW+' '+OLD+'\n')
                 atomic=pull.atomic_json
+                directory_sync=[]
                 def save(path,value):
                     if failure=='state' and path.name=='deployed.json':raise RuntimeError('synthetic state failure')
                     atomic(path,value)
-                with patch.object(pull,'api',side_effect=api), patch.object(pull,'download',side_effect=download), patch.object(pull,'execute_deployer',side_effect=deploy), patch.object(pull,'current_image',return_value=OLD), patch.object(pull.shutil,'disk_usage',return_value=(10**12,0,10**12)), patch.object(pull,'atomic_json',side_effect=save):
+                with patch.object(pull,'api',side_effect=api), patch.object(pull,'download',side_effect=download), patch.object(pull,'execute_deployer',side_effect=deploy), patch.object(pull,'current_image',return_value=OLD), patch.object(pull.shutil,'disk_usage',return_value=(10**12,0,10**12)), patch.object(pull,'atomic_json',side_effect=save),patch.object(pull,'sync_directory',side_effect=lambda path:directory_sync.append((state/'recovery-required').exists())):
                     if failure:
                         with self.assertRaises(RuntimeError):pull.poll(install,state,app)
                         self.assertTrue((state/'recovery-required').exists())
@@ -129,6 +130,7 @@ class PullTests(unittest.TestCase):
                     else:
                         pull.poll(install,state,app)
                         self.assertFalse((state/'recovery-required').exists())
+                        self.assertEqual(directory_sync,[True,True,False])
                         self.assertEqual(json.loads((state/'deployed.json').read_text())['revision'],SHA)
                         with patch.object(pull,'current_image',return_value=NEW), patch.object(pull,'execute_deployer') as deploy_again:
                             pull.poll(install,state,app);deploy_again.assert_not_called()

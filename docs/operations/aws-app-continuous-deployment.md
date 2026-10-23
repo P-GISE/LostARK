@@ -18,9 +18,9 @@ artifact는 run ID·SHA·main·이름 유일성·만료·GitHub digest·실제 b
 
 ## 상태와 복구
 
-/var/lib/lostark-deploy/poll.lock과 기존 앱 lock이 배포를 직렬화한다. 교체 직전 recovery-required를 fsync하고 성공 후 deployed.json을 임시파일+fsync+replace로 기록한 뒤 marker를 제거한다. 실제 image가 기록 image와 다르면 차단한다. 같은 SHA는 건너뛰고 다운로드 중 main 변경은 교체 전에 차단한다.
+/var/lib/lostark-deploy/poll.lock과 기존 앱 lock이 배포를 직렬화한다. 교체 직전 recovery-required를 fsync하고 성공 후 deployed.json을 임시파일+fsync+replace로 기록한 뒤 marker를 제거하고 state 디렉터리를 다시 fsync한다. 실제 image가 기록 image와 다르면 차단한다. 같은 SHA는 건너뛰고 다운로드 중 main 변경은 교체 전에 차단한다.
 
-배포 실패 시 기존 배포기가 이전 image로 앱3개만 rollback하고 실패 결과를 유지한다. .app-deployment-in-progress 또는 recovery-required가 있으면 재실행을 차단한다. TERM/INT에는 rollback을 시도하고 SIGKILL/전원 종료/state 저장 실패에도 marker가 남는다. marker에는 SHA/run/status만 기록한다.
+배포 실패 시 기존 배포기가 이전 image로 앱3개만 rollback하고 실패 결과를 유지한다. .app-deployment-in-progress 또는 recovery-required가 있으면 재실행을 차단한다. KillMode=control-group은 TERM을 Python과 자식 Bash에 함께 전달한다. Bash는 TERM/INT trap으로 rollback에 진입한 뒤 추가 TERM/INT를 무시한다. rollback 건강 검사는24회 × (최대10초 HTTP 두 번+5초 sleep 두 번)로 약12분까지 가능하므로 TimeoutStopSec는20분이다. Docker daemon 명령 자체가 무한 정지하는 상황까지 무중단 복구를 보장하지는 않으며20분 후 강제종료 시 marker를 유지하고 수동 점검한다. TERM/INT에는 rollback을 시도하고 SIGKILL/전원 종료/state 저장 실패에도 marker가 남는다. marker에는 SHA/run/status만 기록한다.
 
 복구 시 timer를 중지한 뒤 앱3개 image/health, DB·타서비스 보존, .last-app-deployment와 deployed.json을 대조한다. rollback 성공이면 이전 state, 앱 전환은 성공했지만 poll state 저장만 실패했다면 검증한 새 state로 복구한다. 불확실하면 marker를 유지한다. marker 삭제만으로 복구 완료라 판정하지 않는다.
 
@@ -35,7 +35,7 @@ artifact는 run ID·SHA·main·이름 유일성·만료·GitHub digest·실제 b
 1. PR 검토·main 병합·새 main push CI 전체 성공을 확인한다. 과거 failed run은 artifact가 있어도 선택하지 않는다.
 2. 로컬에서 `python3 scripts/prepare-pull-install.py SOURCE_ROOT EXACT_REVIEWED_40_HEX_SHA INITIAL_IMAGE COMPOSE_SHA256 NEW_STAGE`로 검토 commit의 staging을 만든다. 인자는 경로와 공개 해시뿐이다.
 3. 기존 strict-host-key SSH로 staging을 전달한다. 기존 설치는 timer 중지 후 root 전용 백업에 보존한다. /usr/local/lib/lostark-deploy는 root0755, 고정 poller/deployer/validator/override/reviewed.json은 root0644, /var/lib/lostark-deploy는 root0700으로 설치한다. 기존 state를 지우지 않는다. service/timer는 /etc/systemd/system에 root0644로 설치한다. 기존 앱 .env/Compose/DB/tunnel은 수정하지 않는다.
-4. systemd-analyze verify·manifest hash·현재 image/Compose를 확인한다. daemon-reload 후 service를 한 번 시작하여 배포와 보존 조건을 검증한다. 성공 후에만 timer를 enable/start한다. timer는 부팅2분 후 및 이전 실행 종료2분 후(+최대20초) 확인한다.
+4. 초기 후보의 prisma.sha256과 실제 운영 web image의 prisma 전체 파일 해시가 일치하는지 기존 배포기 schema gate로 반드시 확인한다. reviewed manifest의 prisma Git blob 일치만으로 운영 DB 동일성을 가정하지 않는다. systemd-analyze verify·manifest hash·현재 image/Compose를 확인한다. daemon-reload 후 service를 한 번 시작하여 배포와 보존 조건을 검증한다. 성공 후에만 timer를 enable/start한다. timer는 부팅2분 후 및 이전 실행 종료2분 후(+최대20초) 확인한다.
 5. 설치 rollback은 timer 중지→검토된 이전 설치본/manifest 복원→daemon-reload다. 앱 rollback은 별도로 이전 고정 image로 앱3개만 복원하고 상태를 대조한다. 설치 rollback이 DB나 앱을 자동 복원한다고 가정하지 않는다.
 
 ## 검증 한계

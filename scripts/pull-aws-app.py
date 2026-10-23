@@ -143,8 +143,12 @@ def atomic_json(path, value):
         output.flush()
         os.fsync(output.fileno())
     os.replace(temporary, path)
+    sync_directory(path.parent)
+
+
+def sync_directory(path):
     if os.name == 'posix':
-        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        directory = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
         try:
             os.fsync(directory)
         finally:
@@ -208,6 +212,7 @@ def poll(install=INSTALL, state=STATE, app=APP):
         require(len(fields) == 3 and fields[0] == revision and re.fullmatch('sha256:[0-9a-f]{64}', fields[1]), 'Deployment state mismatch')
         atomic_json(state / 'deployed.json', {'revision': revision, 'image': fields[1], 'run': run['id'], 'artifact': artifact['id']})
         marker.unlink()
+        sync_directory(state)
         print('DEPLOYED ' + revision)
 
 
