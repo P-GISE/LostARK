@@ -1,11 +1,10 @@
-name: Deploy AWS app
+name: Build AWS app artifact
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -68,9 +67,9 @@ jobs:
       - name: Build
         run: npm run build
 
-  deploy-aws:
+  publish-aws:
     needs: test
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -78,19 +77,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-
-      - name: Validate existing deploy credentials
-        env:
-          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
-          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
-          AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
-        run: |
-          for key in TS_AUTHKEY AWS_BOOTSTRAP_USER AWS_BOOTSTRAP_SSH_KEY; do
-            if [ -z "${!key}" ]; then
-              echo "::error::Missing required deploy credential: ${key}"
-              exit 1
-            fi
-          done
 
       - name: Build immutable app image
         run: |
@@ -109,39 +95,4 @@ jobs:
         with:
           name: lostark-aws-${{ github.sha }}
           path: bundle/
-          retention-days: 1
-
-      - name: Connect to existing tailnet
-        uses: tailscale/github-action@v4
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Deploy app services over authenticated private SSH
-        env:
-          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
-          AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
-        run: |
-          [[ "${AWS_BOOTSTRAP_USER}" =~ ^[a-z_][a-z0-9_-]*$ ]]
-          ip="$(tailscale ip -4 lostark-party-aws | head -n 1)"
-          [[ "$ip" =~ ^100[.][0-9]+[.][0-9]+[.][0-9]+$ ]]
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "${AWS_BOOTSTRAP_SSH_KEY}" > ~/.ssh/aws-deploy.pem
-          chmod 600 ~/.ssh/aws-deploy.pem
-          ssh_args=(-i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=yes -o HostKeyAlias=lostark-party-aws -o "UserKnownHostsFile=$GITHUB_WORKSPACE/deploy/aws.known_hosts")
-          target="${AWS_BOOTSTRAP_USER}@$ip"
-          remote="/tmp/lostark-app-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          available="$(ssh "${ssh_args[@]}" "$target" 'df -PB1 /opt/lostark-party' | awk 'NR==2 {print $4}')"
-          image_size="$(cat bundle/image-size.txt)"
-          [[ "$available" =~ ^[0-9]+$ && "$image_size" =~ ^[0-9]+$ ]]
-          required="$(( $(stat -c %s bundle/image.tar.gz) + image_size * 2 + 536870912 ))"
-          if [ "$available" -lt "$required" ]; then
-            echo "::error::Insufficient disk space for image load and rollback"
-            exit 1
-          fi
-          ssh "${ssh_args[@]}" "$target" "mkdir -p '$remote' && chmod 700 '$remote'"
-          scp "${ssh_args[@]}" bundle/* "$target:$remote/"
-          ssh "${ssh_args[@]}" "$target" "sudo -n bash '$remote/deploy-aws-app.sh' '${GITHUB_SHA}'"
-
-      - name: Remove runner SSH key
-        if: always()
-        run: rm -f ~/.ssh/aws-deploy.pem
+          retention-days: 7

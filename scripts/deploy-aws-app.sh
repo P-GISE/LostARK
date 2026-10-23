@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-bundle="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+trusted="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bundle="${2:-$trusted}"
 revision="${1:?expected commit SHA}"
 [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid revision' >&2; exit 1; }
 app_dir="${APP_DIR:-/opt/lostark-party}"
@@ -30,7 +31,7 @@ if ! diff -u <(printf '%s\n' "$current_schema") "$bundle/prisma.sha256"; then
   exit 1
 fi
 (cd "$bundle" && sha256sum --check image.tar.gz.sha256)
-config_digest="$(python3 "$bundle/verify-app-image.py" "$bundle/image.tar.gz" "$revision")"
+config_digest="$(python3 "$trusted/verify-app-image.py" "$bundle/image.tar.gz" "$revision")"
 test "$config_digest" = "$(cat "$bundle/image-config-digest.txt")"
 
 snapshot_protected() {
@@ -60,7 +61,7 @@ fi
 compose_app() {
   LOSTARK_RELEASE_IMAGE="$1" docker compose --project-name lostark-party \
     --project-directory "$app_dir" --env-file "$app_dir/.env" \
-    -f "$app_dir/docker-compose.vps.yml" -f "$bundle/app-only.compose.yml" \
+    -f "$app_dir/docker-compose.vps.yml" -f "$trusted/app-only.compose.yml" \
     up -d --no-deps --no-build --pull never "${services[@]}"
 }
 healthy() {

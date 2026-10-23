@@ -1,0 +1,11 @@
+[Unit]
+Description=Check verified LostARK main application updates
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+RandomizedDelaySec=20s
+Unit=lostark-deploy.service
+
+[Install]
+WantedBy=timers.target

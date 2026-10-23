@@ -1,0 +1,14 @@
+[Unit]
+Description=Pull verified LostARK main application artifact
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/lostark-deploy/pull-aws-app.py
+TimeoutStartSec=30min
+TimeoutStopSec=5min
+KillMode=control-group
