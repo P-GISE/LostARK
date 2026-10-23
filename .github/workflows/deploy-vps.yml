@@ -1,19 +1,14 @@
-name: Deploy VPS
+name: Deploy AWS app
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      target:
-        description: Server target to deploy
-        required: true
-        default: vps
-        type: choice
-        options:
-          - vps
-          - aws
-          - all
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-vps
@@ -64,253 +59,89 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Verify image archive validation
+        run: python3 -m unittest discover -s tests/deployment -p '*_test.py'
+
       - name: Run lint
         run: npm run lint
 
       - name: Build
         run: npm run build
 
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || inputs.target == 'vps' || inputs.target == 'all' }}
-    steps:
-      - name: Validate deploy secrets
-        env:
-          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
-        run: |
-          missing=0
-          for key in TS_AUTHKEY VPS_HOST VPS_USER VPS_APP_DIR; do
-            if [ -z "${!key}" ]; then
-              echo "::error title=Missing deploy secret::${key} is not configured"
-              missing=1
-            fi
-          done
-          exit "${missing}"
-
-      - name: Connect to tailnet
-        uses: tailscale/github-action@v4
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Check VPS host reachability
-        id: vps-host
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-        run: |
-          if ping_output="$(tailscale ping --c 1 --timeout 5s "${VPS_HOST}" 2>&1)"; then
-            printf '%s\n' "${ping_output}"
-            echo "reachable=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          printf '%s\n' "${ping_output}"
-
-          if printf '%s\n' "${ping_output}" | grep -q "^pong from "; then
-            echo "reachable=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            echo "::error title=VPS host offline::VPS host did not respond on the tailnet"
-            exit 1
-          fi
-
-          echo "::warning title=Skipping VPS deploy::VPS host did not respond on the tailnet"
-          echo "reachable=false" >> "${GITHUB_OUTPUT}"
-
-      - name: Deploy on VPS
-        if: ${{ steps.vps-host.outputs.reachable == 'true' }}
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
-        run: |
-          tailscale ssh "${VPS_USER}@${VPS_HOST}" "sudo -n env VPS_APP_DIR='${VPS_APP_DIR}' bash -s" <<'REMOTE'
-            set -euo pipefail
-            git config --global --add safe.directory "${VPS_APP_DIR}" || true
-            cd "${VPS_APP_DIR}"
-            git fetch origin main
-            git reset --hard origin/main
-            SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"
-            bash scripts/run-node-script.sh scripts/normalize-production-env.mjs --env-file .env --postgres-host-bind "${SERVER_PRIVATE_IP}"
-            COMPOSE_BAKE=false bash scripts/vps-deploy.sh
-            bash scripts/vps-tailscale-serve.sh
-          REMOTE
-
   deploy-aws:
-    needs: [test, deploy]
+    needs: test
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.test.result == 'success' && (github.event_name == 'push' || inputs.target == 'aws' || inputs.target == 'all') && (github.event_name != 'push' || needs.deploy.result == 'success') }}
-    env:
-      AWS_TAILSCALE_HOST: lostark-party-aws
+    timeout-minutes: 30
     steps:
-      - name: Validate AWS deploy secrets
-        id: aws-secrets
+      - name: Checkout tested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Validate existing deploy credentials
         env:
           TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
-          AWS_HOST: ${{ secrets.AWS_HOST }}
-          AWS_USER: ${{ secrets.AWS_USER }}
-          AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}
-          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
           AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
           AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
         run: |
-          missing=0
-          for key in TS_AUTHKEY AWS_HOST AWS_USER AWS_APP_DIR AWS_BOOTSTRAP_HOST AWS_BOOTSTRAP_USER AWS_BOOTSTRAP_SSH_KEY; do
+          for key in TS_AUTHKEY AWS_BOOTSTRAP_USER AWS_BOOTSTRAP_SSH_KEY; do
             if [ -z "${!key}" ]; then
-              if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-                echo "::error title=Missing AWS deploy secret::${key} is not configured"
-              else
-                echo "::warning title=Skipping AWS deploy::${key} is not configured"
-              fi
-              missing=1
+              echo "::error::Missing required deploy credential: ${key}"
+              exit 1
             fi
           done
 
-          if [ "${missing}" -ne 0 ]; then
-            if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-              exit 1
-            fi
-            echo "configured=false" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
+      - name: Build immutable app image
+        run: |
+          mkdir bundle
+          docker build --label "org.opencontainers.image.revision=${GITHUB_SHA}" -t "lostark-party-app:${GITHUB_SHA}" .
+          docker image inspect --format '{{.Id}}' "lostark-party-app:${GITHUB_SHA}" > bundle/ci-image-id.txt
+          docker image inspect --format '{{.Size}}' "lostark-party-app:${GITHUB_SHA}" > bundle/image-size.txt
+          docker save "lostark-party-app:${GITHUB_SHA}" | gzip > bundle/image.tar.gz
+          (cd bundle && sha256sum image.tar.gz > image.tar.gz.sha256)
+          python3 scripts/verify-app-image.py bundle/image.tar.gz "${GITHUB_SHA}" > bundle/image-config-digest.txt
+          find prisma -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > bundle/prisma.sha256
+          cp deploy/app-only.compose.yml scripts/deploy-aws-app.sh scripts/verify-app-image.py bundle/
 
-          echo "configured=true" >> "${GITHUB_OUTPUT}"
+      - name: Retain deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: lostark-aws-${{ github.sha }}
+          path: bundle/
+          retention-days: 1
 
-      - name: Connect to tailnet for AWS
-        if: ${{ steps.aws-secrets.outputs.configured == 'true' }}
+      - name: Connect to existing tailnet
         uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Check AWS host reachability
-        id: aws-host
-        if: ${{ steps.aws-secrets.outputs.configured == 'true' }}
+      - name: Deploy app services over authenticated private SSH
         env:
-          AWS_HOST: ${{ secrets.AWS_HOST }}
-        run: |
-          for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do
-            if ping_output="$(tailscale ping --c 1 --timeout 5s "${host}" 2>&1)"; then
-              printf '%s\n' "${ping_output}"
-              echo "reachable=true" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-            printf '%s\n' "${ping_output}"
-
-            if printf '%s\n' "${ping_output}" | grep -q "^pong from "; then
-              echo "reachable=true" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-          done
-
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            echo "::error title=AWS host offline::AWS host did not respond on the tailnet"
-            exit 1
-          fi
-
-          echo "::warning title=AWS reachability check inconclusive::AWS host did not respond to tailscale ping; attempting deploy over private SSH"
-          echo "reachable=true" >> "${GITHUB_OUTPUT}"
-
-      - name: Prepare AWS SSH key
-        if: ${{ steps.aws-host.outputs.reachable == 'true' }}
-        env:
-          AWS_HOST: ${{ secrets.AWS_HOST }}
-          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
+          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
           AWS_BOOTSTRAP_SSH_KEY: ${{ secrets.AWS_BOOTSTRAP_SSH_KEY }}
         run: |
+          [[ "${AWS_BOOTSTRAP_USER}" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          ip="$(tailscale ip -4 lostark-party-aws | head -n 1)"
+          [[ "$ip" =~ ^100[.][0-9]+[.][0-9]+[.][0-9]+$ ]]
           install -m 700 -d ~/.ssh
           printf '%s\n' "${AWS_BOOTSTRAP_SSH_KEY}" > ~/.ssh/aws-deploy.pem
           chmod 600 ~/.ssh/aws-deploy.pem
-          resolve_aws_tailscale_ip() {
-            for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do
-              if ip="$(tailscale ip -4 "${host}" 2>/dev/null | head -n 1)" && [ -n "${ip}" ]; then
-                printf '%s\n' "${ip}"
-                return 0
-              fi
-            done
-            return 1
-          }
-          if ! AWS_TAILSCALE_IP="$(resolve_aws_tailscale_ip)"; then
-            echo "::error title=AWS Tailscale IP unavailable::Could not resolve AWS_HOST on the tailnet"
+          ssh_args=(-i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=yes -o HostKeyAlias=lostark-party-aws -o "UserKnownHostsFile=$GITHUB_WORKSPACE/deploy/aws.known_hosts")
+          target="${AWS_BOOTSTRAP_USER}@$ip"
+          remote="/tmp/lostark-app-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          available="$(ssh "${ssh_args[@]}" "$target" 'df -PB1 /opt/lostark-party' | awk 'NR==2 {print $4}')"
+          image_size="$(cat bundle/image-size.txt)"
+          [[ "$available" =~ ^[0-9]+$ && "$image_size" =~ ^[0-9]+$ ]]
+          required="$(( $(stat -c %s bundle/image.tar.gz) + image_size * 2 + 536870912 ))"
+          if [ "$available" -lt "$required" ]; then
+            echo "::error::Insufficient disk space for image load and rollback"
             exit 1
           fi
-          ssh-keyscan -H "${AWS_TAILSCALE_IP}" >> ~/.ssh/known_hosts || true
-          ssh-keyscan -H "${AWS_BOOTSTRAP_HOST}" >> ~/.ssh/known_hosts || true
+          ssh "${ssh_args[@]}" "$target" "mkdir -p '$remote' && chmod 700 '$remote'"
+          scp "${ssh_args[@]}" bundle/* "$target:$remote/"
+          ssh "${ssh_args[@]}" "$target" "sudo -n bash '$remote/deploy-aws-app.sh' '${GITHUB_SHA}'"
 
-      - name: Deploy on AWS backup
-        if: ${{ steps.aws-host.outputs.reachable == 'true' }}
-        env:
-          AWS_HOST: ${{ secrets.AWS_HOST }}
-          AWS_USER: ${{ secrets.AWS_USER }}
-          AWS_APP_DIR: ${{ secrets.AWS_APP_DIR }}
-          AWS_BOOTSTRAP_HOST: ${{ secrets.AWS_BOOTSTRAP_HOST }}
-          AWS_BOOTSTRAP_USER: ${{ secrets.AWS_BOOTSTRAP_USER }}
-        run: |
-          remote_script="$(mktemp)"
-          trap 'rm -f "${remote_script}"' EXIT
-          cat > "${remote_script}" <<'REMOTE'
-            set -euo pipefail
-            git config --global --add safe.directory "${AWS_APP_DIR}" || true
-            cd "${AWS_APP_DIR}"
-            git fetch origin main
-            git reset --hard origin/main
-            SERVER_PRIVATE_IP="$(tailscale ip -4 | head -n 1)"
-            bash scripts/run-node-script.sh scripts/normalize-production-env.mjs --env-file .env --postgres-host-bind "${SERVER_PRIVATE_IP}"
-            COMPOSE_BAKE=false bash scripts/vps-deploy.sh
-            for attempt in $(seq 1 24); do
-              if curl --connect-timeout 2 --max-time 10 -fsSI http://127.0.0.1:3000/ >/dev/null; then
-                break
-              fi
-              if [ "${attempt}" -eq 24 ]; then
-                echo "AWS web health check failed after ${attempt} attempts" >&2
-                exit 1
-              fi
-              sleep 5
-            done
-            sudo -n systemctl enable cloudflared
-            sudo -n systemctl restart cloudflared
-          REMOTE
-
-          resolve_aws_tailscale_ip() {
-            for host in "${AWS_HOST}" "${AWS_TAILSCALE_HOST}"; do
-              if ip="$(tailscale ip -4 "${host}" 2>/dev/null | head -n 1)" && [ -n "${ip}" ]; then
-                printf '%s\n' "${ip}"
-                return 0
-              fi
-            done
-            return 1
-          }
-
-          if ! AWS_TAILSCALE_IP="$(resolve_aws_tailscale_ip)"; then
-            echo "::warning title=AWS private SSH failed::could not resolve AWS_HOST on the tailnet"
-            status=255
-          elif ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_TAILSCALE_IP}" \
-            "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
-            exit 0
-          else
-            status="$?"
-          fi
-
-          echo "::warning title=AWS private SSH failed::retrying over public SSH"
-          if [ "${status}" -ne 255 ]; then
-            exit "${status}"
-          fi
-
-          for attempt in $(seq 1 5); do
-            if ssh -i ~/.ssh/aws-deploy.pem -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o StrictHostKeyChecking=accept-new "${AWS_BOOTSTRAP_USER}@${AWS_BOOTSTRAP_HOST}" \
-              "sudo -n env AWS_APP_DIR='${AWS_APP_DIR}' bash -s" < "${remote_script}"; then
-              exit 0
-            else
-              status="$?"
-            fi
-
-            if [ "${status}" -ne 255 ] || [ "${attempt}" -eq 5 ]; then
-              exit "${status}"
-            fi
-
-            echo "::warning title=AWS public SSH retry::attempt ${attempt} failed; retrying"
-            sleep 20
-          done
+      - name: Remove runner SSH key
+        if: always()
+        run: rm -f ~/.ssh/aws-deploy.pem
