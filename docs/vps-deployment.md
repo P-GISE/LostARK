@@ -53,7 +53,7 @@ Set these values before deploying:
 - `APP_DOMAIN`: `lostark-party.pigs0516.com`
 - `DISCORD_REDIRECT_URI`: `https://lostark-party.pigs0516.com/api/discord/oauth/callback`
 - `SESSION_SECRET`: random long session signing secret
-- `ADMIN_EMAILS`: admin login email list
+- `ADMIN_USER_IDS`: immutable IDs of existing operator-verified accounts. Before deploying this security change, resolve and verify the legitimate administrator IDs through protected management access. Do not derive this list automatically from a new public signup, and do not print account data or IDs in CI logs. The old `ADMIN_EMAILS` value no longer grants authority. No database migration is required; an empty ID list disables admin access while regular login remains available.
 - Discord and Lost Ark API secrets as needed
 
 ## Deploy

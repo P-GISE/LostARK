@@ -8,7 +8,7 @@ import {
   deleteAdminSchedule,
   deleteAdminUser,
   getAdminOverview,
-  isAdminEmail,
+  isAdminUser,
 } from "@/server/admin";
 import { createCharacter } from "@/server/characters";
 import { db } from "@/server/db";
@@ -52,15 +52,15 @@ function mockUserSession(userId: string) {
 describe("admin", () => {
   afterEach(() => {
     vi.clearAllMocks();
-    delete process.env.ADMIN_EMAILS;
+    delete process.env.ADMIN_USER_IDS;
   });
 
-  it("matches admin emails case-insensitively from ADMIN_EMAILS", () => {
-    process.env.ADMIN_EMAILS = "Owner@Example.com, second@example.com";
+  it("matches immutable administrator user IDs from ADMIN_USER_IDS", () => {
+    process.env.ADMIN_USER_IDS = "owner-id, second-id";
 
-    expect(isAdminEmail("owner@example.com")).toBe(true);
-    expect(isAdminEmail("SECOND@example.com")).toBe(true);
-    expect(isAdminEmail("member@example.com")).toBe(false);
+    expect(isAdminUser({ id: "owner-id" })).toBe(true);
+    expect(isAdminUser({ id: "second-id" })).toBe(true);
+    expect(isAdminUser({ id: "member-id" })).toBe(false);
   });
 
   it("returns global users and raid groups for the operator dashboard", async () => {
@@ -122,12 +122,12 @@ describe("admin", () => {
   it("deletes schedules, groups, and login users only for configured admins", async () => {
     const id = randomUUID();
     const adminEmail = `cleanup-admin-${id}@example.com`;
-    process.env.ADMIN_EMAILS = adminEmail;
     const adminUser = await createUser({
       email: adminEmail,
       password: "password123",
       displayName: "Cleanup Admin",
     });
+    process.env.ADMIN_USER_IDS = adminUser.id;
     const nonAdminUser = await createUser({
       email: `cleanup-non-admin-${id}@example.com`,
       password: "password123",
@@ -176,12 +176,12 @@ describe("admin", () => {
   it("deletes a login user's memberships, schedule checks, and created schedules", async () => {
     const id = randomUUID();
     const adminEmail = `cascade-admin-${id}@example.com`;
-    process.env.ADMIN_EMAILS = adminEmail;
     const adminUser = await createUser({
       email: adminEmail,
       password: "password123",
       displayName: "Cascade Admin",
     });
+    process.env.ADMIN_USER_IDS = adminUser.id;
     const targetUser = await createUser({
       email: `cascade-target-${id}@example.com`,
       password: "password123",

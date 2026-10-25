@@ -127,7 +127,7 @@ http://localhost:3000
 | `APP_BASE_URL` | 초대 링크, OAuth redirect, 공유 URL에 쓰는 앱 기준 주소입니다. |
 | `APP_DOMAIN` | 세션 쿠키 도메인 판단에 사용합니다. |
 | `SESSION_SECRET` | 세션 서명용 비밀값입니다. 공개 금지입니다. |
-| `ADMIN_EMAILS` | 관리자 권한을 부여할 이메일 목록입니다. |
+| `ADMIN_USER_IDS` | 보호된 운영 절차에서 확인한 기존 사용자 ID 목록입니다. 이메일 가입만으로 관리자 권한을 부여하지 않습니다. |
 | `DISCORD_CLIENT_ID` | Discord OAuth 애플리케이션 ID입니다. |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth secret입니다. 공개 금지입니다. |
 | `DISCORD_BOT_TOKEN` 또는 `DISCORD_TOKEN` | Discord DM/봇 기능용 토큰입니다. 공개 금지입니다. |

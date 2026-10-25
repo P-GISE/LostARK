@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   deleteAdminSchedule: vi.fn(),
   deleteAdminUser: vi.fn(),
   getAdminOverview: vi.fn(),
-  isAdminEmail: vi.fn(),
+  isAdminUser: vi.fn(),
   requireAdminUser: vi.fn(),
 }));
 
@@ -16,7 +16,7 @@ vi.mock("@/server/admin", () => ({
   deleteAdminSchedule: mocks.deleteAdminSchedule,
   deleteAdminUser: mocks.deleteAdminUser,
   getAdminOverview: mocks.getAdminOverview,
-  isAdminEmail: mocks.isAdminEmail,
+  isAdminUser: mocks.isAdminUser,
   requireAdminUser: mocks.requireAdminUser,
 }));
 
@@ -27,7 +27,7 @@ describe("AdminPage", () => {
       email: "owner@example.com",
       displayName: "Owner",
     });
-    mocks.isAdminEmail.mockReturnValue(false);
+    mocks.isAdminUser.mockReturnValue(false);
     mocks.getAdminOverview.mockResolvedValue({
       metrics: {
         totalUsers: 3,

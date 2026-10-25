@@ -12,7 +12,7 @@ const shared = {
   APP_DOMAIN: "lostark-party.pigs0516.com",
   SESSION_COOKIE_NAME: "lostark_party_member",
   SESSION_SECRET: "12345678901234567890123456789012",
-  ADMIN_EMAILS: "admin@example.com",
+  ADMIN_USER_IDS: "",
   DISCORD_CLIENT_ID: "discord-client",
   DISCORD_CLIENT_SECRET: "discord-secret",
   DISCORD_BOT_TOKEN: "discord-bot",
