@@ -1,6 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
@@ -12,142 +10,36 @@ export const USER_COOKIE_NAME =
 
 const sessionCookieOptions = {
   httpOnly: true,
-  maxAge: 60 * 60 * 24 * 60,
+  maxAge: 60 * 60 * 24 * 7,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
   path: "/",
 };
 
-function parseEnvValue(value: string) {
-  const trimmed = value.trim();
-  if (
-    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
+const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+function tokenHash(token: string | undefined) {
+  return token && /^[a-f0-9]{64}$/.test(token) ? createHash("sha256").update(token).digest("hex") : null;
 }
-
-function readLocalEnvValue(name: string) {
-  if (process.env.VITEST) {
-    return null;
-  }
-
-  const envPaths = new Set<string>();
-  envPaths.add(join(process.cwd(), ".env"));
-
-  let currentDir = __dirname;
-  for (let depth = 0; depth < 8; depth += 1) {
-    envPaths.add(join(currentDir, ".env"));
-    const parent = dirname(currentDir);
-    if (parent === currentDir) {
-      break;
-    }
-    currentDir = parent;
-  }
-
-  try {
-    const prefix = `${name}=`;
-    for (const envPath of envPaths) {
-      if (!existsSync(envPath)) {
-        continue;
-      }
-      const contents = readFileSync(envPath, "utf8");
-      const line = contents
-        .split(/\r?\n/)
-        .map((entry) => entry.trim())
-        .find((entry) => entry.startsWith(prefix));
-
-      if (line) {
-        return parseEnvValue(line.slice(prefix.length));
-      }
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
+async function readSession(token: string | undefined) {
+  const hash = tokenHash(token);
+  if (!hash) return null;
+  const session = await db.authSession.findUnique({ where: { tokenHash: hash } });
+  return session && session.expiresAt.getTime() > Date.now() ? session : null;
 }
-
-function getConfiguredSessionSecret() {
-  const sessionSecret =
-    process.env.SESSION_SECRET?.trim() ?? readLocalEnvValue("SESSION_SECRET");
-  if (sessionSecret) {
-    return sessionSecret;
-  }
-
-  return null;
+async function revokeSession(token: string | undefined) {
+  const hash = tokenHash(token);
+  if (hash) await db.authSession.deleteMany({ where: { tokenHash: hash } });
 }
-
-function getRequiredSessionSecret() {
-  const secret = getConfiguredSessionSecret();
-  if (secret) {
-    return secret;
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET environment variable is required.");
-  }
-  return "lostark-party-planner-dev-session-secret";
-}
-
-function getOptionalSessionSecret() {
-  const secret = getConfiguredSessionSecret();
-  if (secret) {
-    return secret;
-  }
-  if (process.env.NODE_ENV === "production") {
-    return null;
-  }
-  return "lostark-party-planner-dev-session-secret";
-}
-
-function sessionSignature(payload: string, secret: string) {
-  return createHmac("sha256", secret).update(payload).digest("base64url");
-}
-
-export function signSessionValue(
-  value: string,
-  secret = getRequiredSessionSecret(),
-) {
-  const payload = Buffer.from(value, "utf8").toString("base64url");
-  return `${payload}.${sessionSignature(payload, secret)}`;
-}
-
-export function verifySessionValue(value: string, secret?: string | null) {
-  const sessionSecret =
-    secret === undefined ? getOptionalSessionSecret() : secret;
-  if (!sessionSecret) {
-    return null;
-  }
-
-  const [payload, signature, extra] = value.split(".");
-  if (!payload || !signature || extra !== undefined) {
-    return null;
-  }
-
-  const expected = sessionSignature(payload, sessionSecret);
-  const actualBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
-  if (
-    actualBuffer.length !== expectedBuffer.length ||
-    !timingSafeEqual(actualBuffer, expectedBuffer)
-  ) {
-    return null;
-  }
-
-  try {
-    const decoded = Buffer.from(payload, "base64url").toString("utf8");
-    return decoded.trim() ? decoded : null;
-  } catch {
-    return null;
-  }
+async function createSession(owner: { userId: string; memberId?: never } | { memberId: string; userId?: never }) {
+  const token = randomBytes(32).toString("hex");
+  await db.authSession.create({ data: { tokenHash: tokenHash(token)!, ...owner, expiresAt: new Date(Date.now() + SESSION_LIFETIME_MS) } });
+  return token;
 }
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
-  const rawUserId = cookieStore.get(USER_COOKIE_NAME)?.value;
-  const userId = rawUserId ? verifySessionValue(rawUserId) : null;
+  const session = await readSession(cookieStore.get(USER_COOKIE_NAME)?.value);
+  const userId = session?.userId;
   if (!userId) return null;
 
   return db.user.findUnique({
@@ -157,10 +49,10 @@ export async function getCurrentUser() {
 
 export async function getCurrentMember() {
   const cookieStore = await cookies();
-  const rawUserId = cookieStore.get(USER_COOKIE_NAME)?.value;
-  const userId = rawUserId ? verifySessionValue(rawUserId) : null;
-  const rawMemberId = cookieStore.get(MEMBER_COOKIE_NAME)?.value;
-  const memberId = rawMemberId ? verifySessionValue(rawMemberId) : null;
+  const session = await readSession(cookieStore.get(USER_COOKIE_NAME)?.value);
+  const userId = session?.userId;
+  const memberSession = await readSession(cookieStore.get(MEMBER_COOKIE_NAME)?.value);
+  const memberId = memberSession?.memberId;
   if (!memberId) return null;
 
   const member = await db.member.findUnique({
@@ -168,7 +60,7 @@ export async function getCurrentMember() {
     include: { group: true, user: true },
   });
 
-  if (userId && member?.userId !== userId) {
+  if (member?.userId ? member.userId !== userId : Boolean(userId)) {
     return null;
   }
 
@@ -227,29 +119,38 @@ export async function getMemberForUserInGroup(input: {
 
 export async function setCurrentUserSession(userId: string) {
   const cookieStore = await cookies();
+  await revokeSession(cookieStore.get(USER_COOKIE_NAME)?.value);
   cookieStore.set(
     USER_COOKIE_NAME,
-    signSessionValue(userId),
+    await createSession({ userId }),
     sessionCookieOptions,
   );
 }
 
 export async function setCurrentMemberSession(memberId: string) {
   const cookieStore = await cookies();
+  const member = await db.member.findUnique({ where: { id: memberId } });
+  if (!member) throw new Error("Member does not exist.");
+  const user = await getCurrentUser();
+  if (member.userId ? member.userId !== user?.id : Boolean(user)) throw new Error("Member session ownership mismatch.");
+  await revokeSession(cookieStore.get(MEMBER_COOKIE_NAME)?.value);
   cookieStore.set(
     MEMBER_COOKIE_NAME,
-    signSessionValue(memberId),
+    await createSession({ memberId }),
     sessionCookieOptions,
   );
 }
 
 export async function clearCurrentMemberSession() {
   const cookieStore = await cookies();
+  await revokeSession(cookieStore.get(MEMBER_COOKIE_NAME)?.value);
   cookieStore.delete(MEMBER_COOKIE_NAME);
 }
 
 export async function clearCurrentSessions() {
   const cookieStore = await cookies();
+  await revokeSession(cookieStore.get(USER_COOKIE_NAME)?.value);
   cookieStore.delete(USER_COOKIE_NAME);
+  await revokeSession(cookieStore.get(MEMBER_COOKIE_NAME)?.value);
   cookieStore.delete(MEMBER_COOKIE_NAME);
 }

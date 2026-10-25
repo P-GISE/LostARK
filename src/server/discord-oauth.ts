@@ -1,4 +1,4 @@
-import { signSessionValue, verifySessionValue } from "@/server/auth-context";
+import { signOAuthValue, verifyOAuthValue } from "@/server/signed-oauth-state";
 
 const DISCORD_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -8,11 +8,11 @@ type DiscordOAuthStatePayload = {
 };
 
 function encodeDiscordOAuthState(payload: DiscordOAuthStatePayload) {
-  return signSessionValue(JSON.stringify(payload));
+  return signOAuthValue(JSON.stringify(payload));
 }
 
 export function parseDiscordOAuthState(state: string, now = new Date()) {
-  const verified = verifySessionValue(state);
+  const verified = verifyOAuthValue(state);
   if (!verified) {
     return null;
   }

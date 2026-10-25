@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { signSessionValue, USER_COOKIE_NAME } from "@/server/auth-context";
+import { setCurrentUserSession } from "@/server/auth-context";
 import { createUser } from "@/server/accounts";
 import { setAvailabilitySlot } from "@/server/availability";
 import {
@@ -41,12 +41,13 @@ vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
 }));
 
-function mockUserSession(userId: string) {
+async function mockUserSession(userId: string) {
+  const values = new Map<string, string>();
   mocks.cookies.mockResolvedValue({
-    get: vi.fn((name: string) =>
-      name === USER_COOKIE_NAME ? { value: signSessionValue(userId) } : undefined,
-    ),
+    get: (name: string) => values.has(name) ? { value: values.get(name)! } : undefined,
+    set: (name: string, value: string) => values.set(name, value),
   });
+  await setCurrentUserSession(userId);
 }
 
 describe("admin", () => {
@@ -152,7 +153,7 @@ describe("admin", () => {
       createdByMemberId: leader.id,
     });
 
-    mockUserSession(nonAdminUser.id);
+    await mockUserSession(nonAdminUser.id);
     await expect(
       deleteAdminSchedule({
         scheduleId: schedule.id,
@@ -160,7 +161,7 @@ describe("admin", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(await db.schedule.findUnique({ where: { id: schedule.id } })).not.toBeNull();
 
-    mockUserSession(adminUser.id);
+    await mockUserSession(adminUser.id);
     await deleteAdminSchedule({ scheduleId: schedule.id });
     expect(await db.schedule.findUnique({ where: { id: schedule.id } })).toBeNull();
 
@@ -265,7 +266,7 @@ describe("admin", () => {
         createdByMemberId: targetLeader.id,
       });
 
-      mockUserSession(adminUser.id);
+      await mockUserSession(adminUser.id);
       await deleteAdminUser({ userId: targetUser.id });
 
       expect(await db.user.findUnique({ where: { id: targetUser.id } })).toBeNull();
