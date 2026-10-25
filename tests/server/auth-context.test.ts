@@ -16,6 +16,7 @@ function installCookies(user = true) {
   mocks.sessionFindUnique.mockImplementation(async ({ where }) => ({
     userId: where.tokenHash === createHash("sha256").update(userToken).digest("hex") ? "user-1" : null,
     memberId: where.tokenHash === createHash("sha256").update(memberToken).digest("hex") ? "member-1" : null,
+    memberUserId: user ? "user-1" : null,
     expiresAt: new Date(Date.now() + 60000),
   }));
 }

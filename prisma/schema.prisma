@@ -489,13 +489,14 @@ model RaidSignupAssignment {
 }
 
 model AuthSession {
-  tokenHash String   @id
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  memberId  String?
-  member    Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  tokenHash    String   @id
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberId     String?
+  memberUserId String?
+  member       Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
 
   @@index([expiresAt])
   @@index([userId])

@@ -16,3 +16,5 @@ This release adds AuthSession with a one-owner check, cascading owner relations,
 The table is additive: leave it present if rolling back the image, so business data and migration history remain consistent. An old image ignores it but reintroduces replayable non-expiring sessions; prefer fix-forward. A full schema rollback requires stopping all new-version writers first and separately approving DROP TABLE AuthSession plus migration-history reconciliation; it destroys active sessions, not business records. Never run destructive rollback SQL automatically. Database backup restoration is a separate last-resort decision because it may discard unrelated writes.
 
 Expired records are denied on every request. An operator may periodically delete only expired AuthSession rows through the protected maintenance process; no global cleanup job or live DDL is introduced here.
+
+Member sessions also snapshot memberUserId at issuance and reject any later account unlink/reassignment. This prevents User deletion (Member.userId ON DELETE SET NULL) from converting an account-linked cookie into anonymous access.

@@ -18,7 +18,9 @@ const sessionCookieOptions = {
 
 const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 function tokenHash(token: string | undefined) {
-  return token && /^[a-f0-9]{64}$/.test(token) ? createHash("sha256").update(token).digest("hex") : null;
+  return token && /^[a-f0-9]{64}$/.test(token)
+    ? createHash("sha256").update(token).digest("hex")
+    : null;
 }
 async function readSession(token: string | undefined) {
   const hash = tokenHash(token);
@@ -30,9 +32,19 @@ async function revokeSession(token: string | undefined) {
   const hash = tokenHash(token);
   if (hash) await db.authSession.deleteMany({ where: { tokenHash: hash } });
 }
-async function createSession(owner: { userId: string; memberId?: never } | { memberId: string; userId?: never }) {
+type SessionOwner =
+  | { userId: string; memberId?: never; memberUserId?: never }
+  | { memberId: string; userId?: never; memberUserId: string | null };
+
+async function createSession(owner: SessionOwner) {
   const token = randomBytes(32).toString("hex");
-  await db.authSession.create({ data: { tokenHash: tokenHash(token)!, ...owner, expiresAt: new Date(Date.now() + SESSION_LIFETIME_MS) } });
+  await db.authSession.create({
+    data: {
+      tokenHash: tokenHash(token)!,
+      ...owner,
+      expiresAt: new Date(Date.now() + SESSION_LIFETIME_MS),
+    },
+  });
   return token;
 }
 
@@ -60,6 +72,7 @@ export async function getCurrentMember() {
     include: { group: true, user: true },
   });
 
+  if (member && memberSession?.memberUserId !== member.userId) return null;
   if (member?.userId ? member.userId !== userId : Boolean(userId)) {
     return null;
   }
@@ -132,11 +145,13 @@ export async function setCurrentMemberSession(memberId: string) {
   const member = await db.member.findUnique({ where: { id: memberId } });
   if (!member) throw new Error("Member does not exist.");
   const user = await getCurrentUser();
-  if (member.userId ? member.userId !== user?.id : Boolean(user)) throw new Error("Member session ownership mismatch.");
+  if (member.userId ? member.userId !== user?.id : Boolean(user)) {
+    throw new Error("Member session ownership mismatch.");
+  }
   await revokeSession(cookieStore.get(MEMBER_COOKIE_NAME)?.value);
   cookieStore.set(
     MEMBER_COOKIE_NAME,
-    await createSession({ memberId }),
+    await createSession({ memberId, memberUserId: member.userId }),
     sessionCookieOptions,
   );
 }

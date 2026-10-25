@@ -66,4 +66,14 @@ describe("PostgreSQL session lifecycle", () => {
     await expect(getCurrentUser()).resolves.toBeNull();
     expect(await db.authSession.findUnique({ where: { tokenHash } })).toBeNull();
   });
+  it("does not turn a deleted account's membership cookie into an anonymous session", async () => {
+    const owner = await user();
+    const group = await db.group.create({ data: { name: "Synthetic Orphan", inviteCode: randomUUID() } }); groups.push(group.id);
+    const member = await db.member.create({ data: { groupId: group.id, userId: owner.id, nickname: "Synthetic" } });
+    await setCurrentUserSession(owner.id);
+    await setCurrentMemberSession(member.id);
+    await db.user.delete({ where: { id: owner.id } });
+    expect(await db.member.findUnique({ where: { id: member.id } })).toMatchObject({ userId: null });
+    await expect(getCurrentMember()).resolves.toBeNull();
+  });
 });
