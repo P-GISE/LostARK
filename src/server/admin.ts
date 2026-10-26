@@ -3,22 +3,17 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/server/auth-context";
 import { db } from "@/server/db";
 
-function getConfiguredAdminEmails() {
+function getConfiguredAdminUserIds() {
   return new Set(
-    (process.env.ADMIN_EMAILS ?? "")
+    (process.env.ADMIN_USER_IDS ?? "")
       .split(/[,\s;]+/)
-      .map((email) => email.trim().toLowerCase())
+      .map((id) => id.trim())
       .filter(Boolean),
   );
 }
 
-export function isAdminEmail(email: string | null | undefined) {
-  if (!email) return false;
-  return getConfiguredAdminEmails().has(email.trim().toLowerCase());
-}
-
-export function isAdminUser(user: Pick<User, "email"> | null | undefined) {
-  return isAdminEmail(user?.email);
+export function isAdminUser(user: Pick<User, "id"> | null | undefined) {
+  return Boolean(user?.id && getConfiguredAdminUserIds().has(user.id));
 }
 
 export async function requireAdminUser() {
@@ -63,6 +58,7 @@ export async function deleteAdminUser(input: {
   const target = await db.user.findUnique({
     where: { id: input.userId },
     select: {
+      id: true,
       email: true,
       memberships: {
         select: {
@@ -74,7 +70,7 @@ export async function deleteAdminUser(input: {
       },
     },
   });
-  if (target && isAdminEmail(target.email)) {
+  if (isAdminUser(target)) {
     throw new Error("관리자 계정은 삭제할 수 없습니다");
   }
 

@@ -136,7 +136,7 @@ Expected: PASS.
 Assert operational settings round-trip these values:
 
 ```ts
-discordGuildId: "791362292523466822",
+discordGuildId: "1234567890",
 discordRecruitmentChannelId: "1234567890",
 discordAnnouncementChannelId: "9876543210",
 ```

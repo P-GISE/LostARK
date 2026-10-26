@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
 describe("AppShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.ADMIN_EMAILS;
+    delete process.env.ADMIN_USER_IDS;
     Reflect.deleteProperty(window, "__lostArkPartyAdSenseUnitsRequested");
     Reflect.deleteProperty(window, "adsbygoogle");
     mocks.getCurrentUser.mockResolvedValue(null);
@@ -119,7 +119,7 @@ describe("AppShell", () => {
   });
 
   it("shows the admin link for configured admin users", async () => {
-    process.env.ADMIN_EMAILS = "owner@example.com";
+    process.env.ADMIN_USER_IDS = "user-admin";
     mocks.getCurrentMember.mockResolvedValue({
       id: "member-admin",
       nickname: "Owner",

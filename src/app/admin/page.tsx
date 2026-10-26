@@ -6,7 +6,7 @@ import {
   deleteAdminSchedule,
   deleteAdminUser,
   getAdminOverview,
-  isAdminEmail,
+  isAdminUser,
   requireAdminUser,
 } from "@/server/admin";
 
@@ -142,7 +142,7 @@ export default async function AdminPage() {
                         <input name="userId" type="hidden" value={user.id} />
                         <ConfirmSubmitButton
                           className={cleanupButtonClassName}
-                          disabled={isAdminEmail(user.email)}
+                          disabled={isAdminUser(user)}
                           message={`로그인 유저 "${user.email}" 계정을 삭제할까요? 연결된 공대원 기록, 참석 체크, 가능 시간, 캐릭터, 생성한 일정도 삭제됩니다.`}
                         >
                           유저 삭제
