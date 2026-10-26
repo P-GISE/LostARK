@@ -14,7 +14,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  security:
+    uses: ./.github/workflows/security-gate.yml
   test:
+    needs: ["security"]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -38,10 +41,12 @@ jobs:
       DISCORD_REDIRECT_URI: http://localhost:3000/api/discord/oauth/callback
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
           cache: npm
@@ -68,14 +73,15 @@ jobs:
         run: npm run build
 
   publish-aws:
-    needs: test
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    needs: ["security", "test"]
+    if: "${{ needs.security.result == 'success' && (github.ref == 'refs/heads/main' && github.event_name == 'push') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout tested revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          persist-credentials: false
           ref: ${{ github.sha }}
 
       - name: Build immutable app image
@@ -91,7 +97,7 @@ jobs:
           cp deploy/app-only.compose.yml scripts/deploy-aws-app.sh scripts/verify-app-image.py bundle/
 
       - name: Retain deployment evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: lostark-aws-${{ github.sha }}
           path: bundle/
