@@ -1,0 +1,63 @@
+name: LostARK verified SSM deploy
+
+on:
+  workflow_run:
+    workflows: [Build AWS app artifact]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lostark-production-event-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      ${{ vars.LOSTARK_DEPLOY_ENABLED == 'true' &&
+          github.repository == 'P-GISE/LostARK' && github.ref == 'refs/heads/main' && github.run_attempt == 1 &&
+          github.event_name == 'workflow_run' && github.event.action == 'completed' &&
+          github.event.workflow_run.name == 'Build AWS app artifact' &&
+          github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.status == 'completed' && github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.run_attempt == 1 &&
+          github.event.workflow_run.repository.full_name == 'P-GISE/LostARK' &&
+          github.event.workflow_run.head_repository.full_name == 'P-GISE/LostARK' }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      DEPLOY_ENABLED: ${{ vars.LOSTARK_DEPLOY_ENABLED }}
+      GH_TOKEN: ${{ github.token }}
+      AWS_MAX_ATTEMPTS: '1'
+      AWS_RETRY_MODE: standard
+      AWS_PAGER: ''
+    steps:
+      - name: Checkout trusted workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: scripts/deploy/event_ssm.py
+          sparse-checkout-cone-mode: false
+      - name: Validate current canonical main push and artifact metadata
+        run: python3 -I -B scripts/deploy/event_ssm.py validate
+      - name: Assume only the fixed LostARK S1 role
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        with:
+          aws-region: ap-southeast-2
+          role-to-assume: arn:aws:iam::753805950222:role/PGISE-S1-Deploy-LostARK
+          allowed-account-ids: '753805950222'
+          role-session-name: lostark-${{ github.run_id }}
+          role-duration-seconds: 3600
+          retry-max-attempts: 1
+          mask-aws-account-id: true
+      - name: Revalidate and send exactly one fixed command then verify its receipt
+        env:
+          EXPECTED_DOCUMENT_SHA256: ${{ vars.LOSTARK_SSM_DOCUMENT_SHA256 }}
+        run: python3 -I -B scripts/deploy/event_ssm.py deploy
