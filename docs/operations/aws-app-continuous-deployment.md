@@ -1,5 +1,15 @@
 # AWS 앱 자동 배포 경계
 
+## SSM 이벤트 전환 준비 — 2026-10-31
+
+추가된 `deploy-event.yml`은 기존 `Build AWS app artifact`의 현재 main push·첫 시도 성공 run과 유일한 artifact를 다시 확인한 뒤, LostARK 전용 OIDC 역할로 S1의 고정 SSM 문서 버전1만 호출한다. 문서 내용과 실제 AWS 문서 해시를 검증하며 배포 명령은 한 번만 전송한다. 실패·응답 유실 때 재전송하지 않고 CommandId와 실제 서버 상태를 대조한다. 고정 root entry는 앱3개 외의 DB·환경·공유 터널을 변경하지 않는다.
+
+`LOSTARK_DEPLOY_ENABLED=false`가 현재 운영 설정이며 이 변경만으로 이벤트 배포를 활성화하지 않는다. `LOSTARK_SSM_DOCUMENT_SHA256`에는 로컬 파일 서식 해시가 아니라 AWS 버전1의 실제 해시를 고정한다. 기존 타이머는 최초 보호 소스 승격과 새 자동 이벤트 검증이 끝날 때까지 복구 경로로 유지한다. 같은 SHA의 legacy receipt를 이벤트 성공으로 바꿔 쓰지 않는다. workflow/helper 추가로 달라지는 보호 소스 기준은 별도 검토한 일회 승격 절차로만 갱신한다.
+
+기존 CI의 Python discovery는 `event_ssm_test.py`의 Docker 제어 코드만 호스트에서 실행한다. 실제 helper 회귀14개는 고정 공식 Python 이미지, 네트워크 없음, 읽기 전용 소스·루트, 명시 환경, scratch 전용 쓰기와 자원·시간 제한 안에서 실행한다. Docker를 사용할 수 없으면 실패하며 호스트 실행으로 대체하거나 검사를 건너뛰지 않는다. 이 검사는 실제 OIDC·SSM·앱 배포 성공을 증명하지 않는다.
+
+아래는 기존 타이머 배포 경로와 최초 설치 이력이다.
+
 main push는 격리 PostgreSQL 테스트·lint·build를 통과한 같은 SHA의 이미지를 GitHub runner에서 만들고 7일 보존 artifact로 게시한다. PR은 검증만 한다. S1 root timer는 기존 ubuntu GitHub 인증으로 LostARK 저장소의 현재 main·push·지정 workflow·completed/success run을 확인한 뒤 산출물을 가져온다. CI 성공과 실제 서버 배포 성공은 별개다. 새 AWS 자원·Tailscale 키·접근 정책은 생성하지 않는다. runner/artifact 사용량은 GitHub 요금제에 따른다.
 
 AWS /opt/lostark-party의 web·worker·character-worker만 교체한다. 대표 lostark-party.pigs0516.com은 별도 Windows PC3002 경로이므로 AWS 배포를 PC 업데이트로 표시하지 않는다. PC의 인증된 관리 접속·checkout·스케줄러는 미확인이다. 오래된 PC 시작 스크립트에는 공유 터널 재시작이 포함되어 이 배포에서 호출하지 않는다.
