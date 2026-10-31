@@ -186,6 +186,10 @@ npm run worker:characters
 
 ## 운영 문서
 
+AWS 이벤트 배포는 성공한 main push CI의 정확한 SHA와 artifact를 확인하고,
+GitHub OIDC로 LostARK 전용 역할을 받아 S1의 고정 SSM 문서를 호출합니다.
+운영 전환은 SSM 결과와 서버의 배포 receipt·이미지·기존 DB 보존을 함께 대조해 검증합니다.
+
 - VPS 배포: `docs/vps-deployment.md`
 - 단일 운영 DB 전환: `docs/operations/single-production-db-cutover.md`
 - AWS failover: `infra/aws-failover/README.md`
