@@ -39,7 +39,7 @@ jobs:
       AWS_PAGER: ''
     steps:
       - name: Checkout trusted workflow revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -48,7 +48,7 @@ jobs:
       - name: Validate current canonical main push and artifact metadata
         run: python3 -I -B scripts/deploy/event_ssm.py validate
       - name: Assume only the fixed LostARK S1 role
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
         with:
           aws-region: ap-southeast-2
           role-to-assume: arn:aws:iam::753805950222:role/PGISE-S1-Deploy-LostARK
