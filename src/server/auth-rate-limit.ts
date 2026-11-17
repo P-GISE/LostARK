@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { createHmac, randomBytes } from "node:crypto";
 
 export type AuthRateLimitScope = "login" | "signup";
 
@@ -35,6 +36,8 @@ const AUTH_RATE_LIMIT_RULES = {
 } satisfies Record<AuthRateLimitScope, AuthRateLimitRule>;
 
 const authRateLimitEntries = new Map<string, AuthRateLimitEntry>();
+const bucketSecret = randomBytes(32);
+let globalBudget = { count: 0, resetAt: 0 };
 
 function normalizeIdentifier(identifier: string) {
   const normalized = identifier.trim().toLowerCase();
@@ -46,20 +49,14 @@ function rateLimitKey(input: {
   readonly identifier: string;
   readonly scope: AuthRateLimitScope;
 }) {
-  return [
+  const identity = [
     "auth",
     input.scope,
     input.clientIp,
     normalizeIdentifier(input.identifier),
   ].join(":");
-}
-
-function pruneExpiredRateLimitEntries(now: number) {
-  for (const [key, entry] of authRateLimitEntries.entries()) {
-    if (entry.resetAt <= now) {
-      authRateLimitEntries.delete(key);
-    }
-  }
+  // shortcut: fixed buckets may share quotas; use shared storage before scaling replicas.
+  return String(createHmac("sha256", bucketSecret).update(identity).digest().readUInt32BE(0) % 65536);
 }
 
 export function readClientIp(headerStore: HeaderReader) {
@@ -79,10 +76,17 @@ export function consumeAuthRateLimit(input: {
 }): AuthRateLimitTicket {
   const now = input.now ?? Date.now();
   const rule = AUTH_RATE_LIMIT_RULES[input.scope];
+  if (globalBudget.resetAt <= now) globalBudget = { count: 0, resetAt: now + 1000 };
+  if (globalBudget.count >= 100) throw new Error(RATE_LIMIT_MESSAGE);
+  globalBudget.count += 1;
+  const clientKey = "client:" + rateLimitKey({ ...input, identifier: "" });
+  const client = authRateLimitEntries.get(clientKey);
+  if (client && client.resetAt > now && client.count >= 20) throw new Error(RATE_LIMIT_MESSAGE);
+  authRateLimitEntries.set(clientKey, client && client.resetAt > now
+    ? { count: client.count + 1, resetAt: client.resetAt }
+    : { count: 1, resetAt: now + 1000 });
   const key = rateLimitKey(input);
   const existing = authRateLimitEntries.get(key);
-
-  pruneExpiredRateLimitEntries(now);
 
   if (!existing || existing.resetAt <= now) {
     authRateLimitEntries.set(key, {
@@ -122,4 +126,5 @@ export function clearAuthRateLimit(ticket: AuthRateLimitTicket) {
 
 export function resetAuthRateLimitsForTests() {
   authRateLimitEntries.clear();
+  globalBudget = { count: 0, resetAt: 0 };
 }

@@ -71,3 +71,10 @@ describe("auth rate limit", () => {
     expect(readClientIp(headers)).toBe("203.0.113.1");
   });
 });
+
+it("bounds account rotation per client and reopens the short burst window", () => {
+  resetAuthRateLimitsForTests();
+  for (let i = 0; i < 20; i++) consumeAuthRateLimit({clientIp:"192.0.2.5",identifier:"user"+i,scope:"login",now:0});
+  expect(() => consumeAuthRateLimit({clientIp:"192.0.2.5",identifier:"fresh",scope:"login",now:0})).toThrow();
+  expect(() => consumeAuthRateLimit({clientIp:"192.0.2.5",identifier:"fresh",scope:"login",now:1000})).not.toThrow();
+});
